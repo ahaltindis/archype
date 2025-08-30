@@ -29,6 +29,7 @@ sudo pacman -S --noconfirm --needed "${packages[@]}"
 # Configure bash
 mkdir -p ~/.config
 cp -R ~/.local/share/omarchy/config/terminal/fastfetch ~/.config/
+cp -R ~/.local/share/omarchy/config/terminal/btop ~/.config/
 
 # Use default bashrc from Omarchy
 # cp ~/.local/share/omarchy/default/bashrc ~/.bashrc

@@ -22,7 +22,7 @@ source $OMARCHY_INSTALL/config/hardware/usb-autosuspend.sh
 source $OMARCHY_INSTALL/config/hardware/ignore-power-button.sh
 source $OMARCHY_INSTALL/config/hardware/nvidia.sh
 
-# source $OMARCHY_INSTALL/config/branding.sh
+source $OMARCHY_INSTALL/config/branding.sh
 # source $OMARCHY_INSTALL/config/terminal.sh
 # source $OMARCHY_INSTALL/config/config.sh
 # source $OMARCHY_INSTALL/config/theme.sh

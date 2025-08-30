@@ -30,4 +30,4 @@ if [[ $OMARCHY_REF != "main" ]]; then
 fi
 
 echo -e "\nInstallation starting..."
-#source ~/.local/share/omarchy/install.sh
+source ~/.local/share/omarchy/install.sh

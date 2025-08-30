@@ -28,9 +28,9 @@ source $OMARCHY_INSTALL/config/identification.sh
 source $OMARCHY_INSTALL/config/branding.sh
 source $OMARCHY_INSTALL/config/terminal.sh
 source $OMARCHY_INSTALL/config/git.sh
+source $OMARCHY_INSTALL/config/gpg.sh
 source $OMARCHY_INSTALL/config/security.sh
 # source $OMARCHY_INSTALL/config/theme.sh
-# source $OMARCHY_INSTALL/config/gpg.sh
 # source $OMARCHY_INSTALL/config/detect-keyboard-layout.sh
 # source $OMARCHY_INSTALL/config/xcompose.sh
 # source $OMARCHY_INSTALL/config/mise-ruby.sh

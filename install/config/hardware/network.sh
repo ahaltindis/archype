@@ -8,5 +8,5 @@ if ! command -v iwctl &>/dev/null; then
 fi
 
 # Prevent systemd-networkd-wait-online timeout on boot
-sudo systemctl disable systemd-networkd-wait-online.service
+sudo systemctl disable systemd-networkd-wait-online.service &>/dev/null
 sudo systemctl mask systemd-networkd-wait-online.service

@@ -22,6 +22,7 @@ packages=(
   starship       # bash prompt
   bash-completion
   gum            # make interactive terminal tools
+  rsync
 )
 
 sudo pacman -S --noconfirm --needed "${packages[@]}"

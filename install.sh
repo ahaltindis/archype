@@ -6,6 +6,8 @@ set -eE
 export PATH="$HOME/.local/share/omarchy/bin:$PATH"
 OMARCHY_INSTALL=~/.local/share/omarchy/install
 
+omarchy-show-logo
+
 # Preparation
 source $OMARCHY_INSTALL/preflight/trap-errors.sh
 source $OMARCHY_INSTALL/preflight/guard.sh
@@ -22,6 +24,7 @@ source $OMARCHY_INSTALL/config/hardware/usb-autosuspend.sh
 source $OMARCHY_INSTALL/config/hardware/ignore-power-button.sh
 source $OMARCHY_INSTALL/config/hardware/nvidia.sh
 
+source $OMARCHY_INSTALL/config/identification.sh
 source $OMARCHY_INSTALL/config/branding.sh
 source $OMARCHY_INSTALL/config/terminal.sh
 # source $OMARCHY_INSTALL/config/theme.sh

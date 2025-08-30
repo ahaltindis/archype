@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo pacman -S --noconfirm \
+sudo pacman -S --noconfirm --needed \
   cups cups-pdf cups-filters cups-browsed \
   system-config-printer avahi nss-mdns
 

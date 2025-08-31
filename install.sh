@@ -31,10 +31,12 @@ source $OMARCHY_INSTALL/config/git.sh
 source $OMARCHY_INSTALL/config/gpg.sh
 source $OMARCHY_INSTALL/config/security.sh
 source $OMARCHY_INSTALL/config/theme.sh
-# source $OMARCHY_INSTALL/config/detect-keyboard-layout.sh
 source $OMARCHY_INSTALL/config/fonts.sh
 # Apps
 source $OMARCHY_INSTALL/apps/alacritty.sh
+# Desktop
+source $OMARCHY_INSTALL/desktop/hyprland.sh
+
 # source $OMARCHY_INSTALL/config/xcompose.sh
 # source $OMARCHY_INSTALL/config/mise-ruby.sh
 # source $OMARCHY_INSTALL/config/docker.sh

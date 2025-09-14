@@ -11,7 +11,7 @@ USER_BIN_DIR="$HOME/.local/bin"
 
 source $LIB_DIR/print.sh
 
-UNITS=("preflight")
+UNITS=("preflight" "identity")
 
 catch_errors() {
   print_error "\nArchype installation failed!"

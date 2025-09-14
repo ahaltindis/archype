@@ -21,7 +21,6 @@ packages=(
   plocate        # better locate
   starship       # bash prompt
   bash-completion
-  gum            # make interactive terminal tools
   rsync
 )
 

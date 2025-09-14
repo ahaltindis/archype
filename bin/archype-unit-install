@@ -27,7 +27,7 @@ install_packages() {
       if [ -n "$package" ]; then
         print_title "  -> Installing: $package"
         if [ "$PKG_MANAGER" == "pacman" ]; then
-          sudo pacman -S --noconfirm "$package" || print_active "Warning: Failed to install $package."
+          sudo pacman -S --noconfirm --needed "$package" || print_active "Warning: Failed to install $package."
         elif [ "$PKG_MANAGER" == "aur" ]; then
           yay -S --noconfirm "$package" || print_active "Warning: Failed to install $package."
         fi

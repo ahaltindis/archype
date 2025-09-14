@@ -2,13 +2,14 @@
 
 set -eE
 
-source ./print.sh
-
-ARCHYPE_PATH="."
+export ARCHYPE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
-UNITS_DIR="${ARCHYPE_PATH}/units"
+BIN_DIR="${ARCHYPE_PATH}/bin"
+LIB_DIR="${ARCHYPE_PATH}/lib"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 USER_BIN_DIR="$HOME/.local/bin"
+
+source $LIB_DIR/print.sh
 
 UNITS=("preflight")
 
@@ -43,8 +44,8 @@ check_already_installed() {
     print_inactive "=> $unit [already installed]"
   done
   if [[ -z "$starting_unit" ]]; then
-    print_active "\nNothing left to install, bye!"
-    exit 0
+    print_active "\nNothing left to install"
+    return 0
   elif [[ "$starting_unit" == "${UNITS[0]}" ]]; then
     print_active "\nUnit installation will start with '$starting_unit' unit."
   else
@@ -69,74 +70,29 @@ print_status() {
   print_title "-----------------------------"
 }
 
-install_packages() {
-  local PKG_FILE="$1"
-  local PKG_MANAGER="$2"
-
-  if [ -f "$PKG_FILE" ]; then
-    print_title "  -> Installing packages from $PKG_FILE..."
-    # Read the file line by line and install each package.
-    while IFS= read -r package; do
-      # Trim leading/trailing whitespace from the package name.
-      package=$(echo "$package" | xargs)
-      if [ -n "$package" ]; then
-        print_title "    -> Installing: $package"
-        if [ "$PKG_MANAGER" == "pacman" ]; then
-          sudo pacman -S --noconfirm "$package" || print_active "Warning: Failed to install $package."
-        elif [ "$PKG_MANAGER" == "aur" ]; then
-          yay -S --noconfirm "$package" || print_active "Warning: Failed to install $package."
-        fi
-      fi
-    done < "$PKG_FILE"
-  fi
-}
-
-install_unit() {
-  UNIT="$1"
-  UNIT_PATH="$UNITS_DIR/$unit"
-  if [ ! -d "$UNIT_PATH" ]; then
-    print_error "Error: Unit directory '$UNIT_PATH' not found."
-    exit 1
-  fi
-
-  # Package Installation
-  install_packages "$UNIT_PATH/packages.pacman" "pacman"
-  install_packages "$UNIT_PATH/packages.aur" "aur"
-
-  # Copy binary files
-  if [[ -d "$UNIT_PATH/bin" ]]; then
-    print_title "  -> Copying binary files from $UNIT_PATH/bin"
-    while IFS= read -r file; do
-      print_normal "Copying: $file -> $USER_BIN_DIR/"
-      cp -a "$file" "$USER_BIN_DIR/"
-    done < <(find "$UNIT_PATH/bin" -maxdepth 1 -type f -executable)
-  fi
-
-  # Run unit scripts
-  if [[ -f "$UNIT_PATH/run.sh" ]]; then
-    print_title "  -> Executing $UNIT_PATH/run.sh"
-    source $UNIT_PATH/run.sh
-  fi
-
-  print_success "$unit installed successfully."
-  sleep 1
+copy_unit_install_bin() {
+  local file="archype-unit-install"
+  print_title "  -> Linking $BIN_DIR/$file -> $USER_BIN_DIR/"
+  ln -sf "$BIN_DIR/$file" "$USER_BIN_DIR/"
 }
 
 main() {
+  clear
+  print_logo
+  print_title "Starting installation.."
+
+  copy_unit_install_bin
+
+  check_already_installed
+
   local unit
   for unit in "${to_install[@]}"; do
     print_status
-    install_unit "$unit"
+    archype-unit-install "$unit"
     installed["$unit"]=1
-    touch "$INSTALL_STATE_DIR/$unit.done"
   done
 
-  print_status
+  print_success "\nInstallation completed. Restart the computer!"
 }
 
-clear
-print_logo
-print_title "Starting installation.."
-check_already_installed
 main
-print_success "\n Installation completed. Restart the computer!"

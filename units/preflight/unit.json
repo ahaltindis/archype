@@ -1,0 +1,6 @@
+{
+  "name": "Preflight Checks",
+  "description": "Runs some preflight checks",
+  "version": "1.0.0",
+  "dependencies": []
+}

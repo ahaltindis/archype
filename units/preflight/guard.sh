@@ -1,8 +1,9 @@
 #!/bin/bash
 
 abort() {
-  echo -e "\e[31mOmarchy install requires: $1\e[0m"
+  print_error "Install requires: $1"
   echo
+  exit 1
 }
 
 # Must be an Arch distro
@@ -14,7 +15,7 @@ for marker in /etc/cachyos-release /etc/eos-release /etc/garuda-release /etc/man
 done
 
 # Must not be running as root
-[ "$EUID" -eq 0 ] && abort "Running as root (not user)"
+[ "$EUID" -eq 0 ] && abort "Normal user (not sudo)"
 
 # Must be x86 only to fully work
 [ "$(uname -m)" != "x86_64" ] && abort "x86_64 CPU"
@@ -24,4 +25,4 @@ pacman -Qe gnome-shell &>/dev/null && abort "Fresh + Vanilla Arch"
 pacman -Qe plasma-desktop &>/dev/null && abort "Fresh + Vanilla Arch"
 
 # Cleared all guards
-echo "Guards: OK"
+print_success "Guards: OK"

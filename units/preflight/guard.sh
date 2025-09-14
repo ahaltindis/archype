@@ -25,4 +25,4 @@ pacman -Qe gnome-shell &>/dev/null && abort "Fresh + Vanilla Arch"
 pacman -Qe plasma-desktop &>/dev/null && abort "Fresh + Vanilla Arch"
 
 # Cleared all guards
-print_success "Guards: OK"
+print_normal "Guards: OK"

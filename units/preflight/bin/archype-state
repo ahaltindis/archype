@@ -1,0 +1,54 @@
+#!/bin/bash
+
+STATE_DIR="$HOME/.local/state/archype"
+mkdir -p "$STATE_DIR"
+
+COMMAND="$1"
+STATE_NAME="$2"
+STATE_FILE="$STATE_DIR/$STATE_NAME"
+
+usage() {
+  echo "Usage: archype-state <set|get|clear> <state-name> [value]"
+  echo "  set   <name> [value]  Create or overwrite a state file, optionally with content"
+  echo "  get   <name>          Print the contents of a state file"
+  echo "  clear <pattern>       Remove state files matching a name or glob pattern"
+  exit 1
+}
+
+if [[ -z "$COMMAND" ]]; then
+  usage
+fi
+
+case "$COMMAND" in
+  set)
+    if [[ -z "$STATE_NAME" ]]; then
+      usage
+    fi
+    shift 2
+    echo -n "$*" > "$STATE_FILE"
+    ;;
+
+  get)
+    if [[ -z "$STATE_NAME" ]]; then
+      usage
+    fi
+    if [[ -f "$STATE_FILE" ]]; then
+      cat "$STATE_FILE"
+    else
+      echo "State '$STATE_NAME' not found." >&2
+      exit 1
+    fi
+    ;;
+
+  clear)
+    if [[ -z "$STATE_NAME" ]]; then
+      usage
+    fi
+    find "$STATE_DIR" -maxdepth 1 -type f -name "$STATE_NAME" -delete
+    ;;
+
+  *)
+    usage
+    ;;
+esac
+

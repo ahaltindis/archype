@@ -8,6 +8,7 @@ ARCHYPE_PATH="."
 LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
 UNITS_DIR="${ARCHYPE_PATH}/units"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
+USER_BIN_DIR="$HOME/.local/bin"
 
 UNITS=("preflight")
 
@@ -21,6 +22,7 @@ catch_errors() {
 trap catch_errors ERR
 
 mkdir -p ${INSTALL_STATE_DIR}
+mkdir -p ${USER_BIN_DIR}
 
 declare -a to_install
 declare -A installed
@@ -101,13 +103,22 @@ install_unit() {
   install_packages "$UNIT_PATH/packages.pacman" "pacman"
   install_packages "$UNIT_PATH/packages.aur" "aur"
 
+  # Copy binary files
+  if [[ -d "$UNIT_PATH/bin" ]]; then
+    print_title "  -> Copying binary files from $UNIT_PATH/bin"
+    while IFS= read -r file; do
+      print_normal "Copying: $file -> $USER_BIN_DIR/"
+      cp -a "$file" "$USER_BIN_DIR/"
+    done < <(find "$UNIT_PATH/bin" -maxdepth 1 -type f -executable)
+  fi
+
   # Run unit scripts
   if [[ -f "$UNIT_PATH/run.sh" ]]; then
     print_title "  -> Executing $UNIT_PATH/run.sh"
     source $UNIT_PATH/run.sh
   fi
 
-  echo "$unit installed successfully."
+  print_success "$unit installed successfully."
   sleep 1
 }
 

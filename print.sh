@@ -31,7 +31,7 @@ print_logo()   {
     echo -e "${COLOR_RESET}";
   fi
 }
-print_title()     { echo -e "${COLOR_BOLD_CYAN}$*${COLOR_RESET}\n"; }
+print_title()     { echo -e "\n${COLOR_BOLD_CYAN}$*${COLOR_RESET}"; }
 print_inactive()  { echo -e "${COLOR_BOLD_BLACK}$*${COLOR_RESET}"; }
 print_active()    { echo -e "${COLOR_YELLOW}$*${COLOR_RESET}"; }
 print_success()   { echo -e "${COLOR_GREEN}$*${COLOR_RESET}"; }

@@ -30,8 +30,8 @@ install_packages() {
     print_title "-> Installing packages from $PKG_FILE..."
     # Read the file line by line and install each package.
     while IFS= read -r package; do
-      # Trim leading/trailing whitespace from the package name.
-      package=$(echo "$package" | xargs)
+      # Trim comments, leading/trailing whitespace from the package name.
+      package=$(echo -e "$package" | grep -vE '^\s*#' | awk '{$1=$1};1' | cut -d' ' -f1 | xargs)
       if [ -n "$package" ]; then
         print_title "  -> Installing: $package"
         if [ "$PKG_MANAGER" == "pacman" ]; then

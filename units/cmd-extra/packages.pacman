@@ -1,0 +1,26 @@
+zsh
+eza
+fzf
+zoxide
+nvim
+lazygit
+mise
+imagemagick
+unzip
+inetutils
+impala         # TUI Wifi
+fd             # better find
+ripgrep
+bat            # better cat
+dust           # better du
+jq
+fastfetch      # system information display tool
+btop           # system monitor
+man
+tldr
+less
+whois
+plocate        # better locate
+starship       # bash prompt
+bash-completion
+rsync

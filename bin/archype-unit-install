@@ -10,13 +10,21 @@ fi
 LIB_DIR="${ARCHYPE_PATH}/lib"
 UNITS_DIR="${ARCHYPE_PATH}/units"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
+DEFAULT_CONFIG_DIR="$HOME/.config/archype"
 USER_BIN_DIR="$HOME/.local/bin"
+
+mkdir -p ${DEFAULT_CONFIG_DIR}
 
 source $LIB_DIR/print.sh
 
 install_packages() {
   local PKG_FILE="$1"
   local PKG_MANAGER="$2"
+
+  # update database for pacman
+  if [ "$PKG_MANAGER" == "pacman" ]; then
+    sudo pacman -Sy
+  fi
 
   if [ -f "$PKG_FILE" ]; then
     print_title "-> Installing packages from $PKG_FILE..."
@@ -56,6 +64,30 @@ install_unit() {
       print_title "  -> $file -> $USER_BIN_DIR/"
       ln -sf "$file" "$USER_BIN_DIR/"
     done < <(find "$UNIT_PATH/bin" -maxdepth 1 -type f -executable)
+  fi
+
+  # Link config directory
+  if [[ -d "$UNIT_PATH/config" ]]; then
+    print_title "-> Linking config directory"
+    print_title "  -> $UNIT_PATH/config -> $DEFAULT_CONFIG_DIR/$UNIT"
+      ln -sfn "$UNIT_PATH/config" "$DEFAULT_CONFIG_DIR/$UNIT"
+  fi
+
+  if [[ -f "$UNIT_PATH/unit.json" ]]; then
+    print_title "-> Checking user configs"
+    jq -c '.user_config[]' "$UNIT_PATH/unit.json" | while read -r pair; do
+      src=$(echo "$pair" | jq -r '.[0]')
+      dst=$(echo "$pair" | jq -r '.[1]')
+
+      src_abs="$UNIT_PATH/user/$src"
+      dst_abs="$HOME/$dst"
+      if [[ ! -f "$src_abs" ]]; then
+        print_error "Config file cannot be found in the Archype source!"
+        return 1
+      fi
+      print_title "  -> $src_abs -> $dst_abs"
+      archype-config-update "$src_abs" "$dst_abs"
+    done
   fi
 
   # Run unit scripts

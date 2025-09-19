@@ -9,9 +9,11 @@ LIB_DIR="${ARCHYPE_PATH}/lib"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 USER_BIN_DIR="$HOME/.local/bin"
 
+export PATH="$USER_BIN_DIR:$PATH"
+
 source $LIB_DIR/print.sh
 
-UNITS=("preflight" "identity")
+UNITS=("preflight" "identity" "cmd")
 
 catch_errors() {
   print_error "\nArchype installation failed!"
@@ -76,12 +78,27 @@ copy_unit_install_bin() {
   ln -sf "$BIN_DIR/$file" "$USER_BIN_DIR/"
 }
 
+install_prerequisites() {
+  local -a packages
+  packages=("gum" "jq")
+
+  local pkg
+  for pkg in "${packages[@]}"; do
+    if ! command -v $pkg &>/dev/null; then
+      print_title "  -> Installing prerequisite package '$pkg'"
+      sudo pacman -S --noconfirm --needed "$pkg"
+    fi
+  done
+}
+
 main() {
   clear
   print_logo
   print_title "Starting installation.."
 
   copy_unit_install_bin
+
+  install_prerequisites
 
   check_already_installed
 

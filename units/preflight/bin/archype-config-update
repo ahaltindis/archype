@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -eE
+
+# This script updates src config file with dest config file.
+src_file=$1
+dst_file=$2
+
+if [[ -z "$src_file" || -z "$dst_file" ]]; then
+  cat <<USAGE
+  Usage: $0 [src_file] [dst_file]
+
+  Must provide a source file path and destination file path to be updated.
+USAGE
+  exit 1
+fi
+
+backup_file="$dst_file.bak.$(date +%s)"
+
+if [[ -f "${dst_file}" ]]; then
+  # Create preliminary backup
+  cp -f "$dst_file" "$backup_file"
+
+  # Replace config with new source
+  cp -f "$src_file" "$dst_file" 2>/dev/null
+
+  # Compare and delete/inform accordingly
+  if cmp -s "$dst_file" "$backup_file"; then
+    rm "$backup_file"
+  else
+    echo -e "Replaced $dst_file with new Archype default.\nSaved backup as ${backup_file}.\n\nChanges:"
+    diff "$dst_file" "$backup_file" || true
+  fi
+else
+  # Config file did not exist already
+  cp -f "$src_file" "$dst_file"
+fi

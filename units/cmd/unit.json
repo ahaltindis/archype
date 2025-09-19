@@ -1,0 +1,9 @@
+{
+  "name": "Cmd",
+  "description": "Configure command line and relevant tools.",
+  "version": "1.0.0",
+  "user_config": [
+    ["zshrc", ".zshrc"]
+  ],
+  "dependencies": []
+}

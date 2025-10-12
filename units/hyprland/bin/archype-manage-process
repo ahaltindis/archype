@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if command -v btop &>/dev/null; then
+  alacritty -e btop
+  exit 0
+fi
+
+notify-send "Process management software not found"
+

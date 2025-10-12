@@ -1,0 +1,116 @@
+#!/bin/bash
+
+menu() {
+  local prompt="$1"
+  local options="$2"
+  local extra="$3"
+  local preselect="$4"
+
+  read -r -a args <<<"$extra"
+
+  if [[ -n "$preselect" ]]; then
+    local index
+    index=$(echo -e "$options" | grep -nxF "$preselect" | cut -d: -f1)
+    if [[ -n "$index" ]]; then
+      args+=("-a" "$index")
+    fi
+  fi
+
+  echo -e "$options" | walker --dmenu --theme dmenu_250 -p "$prompt…" "${args[@]}"
+}
+
+install_font() {
+  archype-launch-cmd "echo 'Installing $1...'; sudo pacman -S --noconfirm --needed $2 && sleep 2 && archype-font-set '$3'"
+}
+
+show_install_font_menu() {
+  case $(menu "Install" "  Meslo LG Mono\n  Fira Code\n  Victor Code\n  Bistream Vera Mono" "-w 350") in
+  *Meslo*) install_font "Meslo LG Mono" "ttf-meslo-nerd" "MesloLGL Nerd Font" ;;
+  *Fira*) install_font "Fira Code" "ttf-firacode-nerd" "FiraCode Nerd Font" ;;
+  *Victor*) install_font "Victor Code" "ttf-victor-mono-nerd" "VictorMono Nerd Font" ;;
+  *Bistream*) install_font "Bistream Vera Code" "ttf-bitstream-vera-mono-nerd" "BitstromWera Nerd Font" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_toggle_menu() {
+  case $(menu "Toggle" "󱄄  Screensaver\n󰔎  Nightlight\n󱫖  Idle Lock\n󰍜  Top Bar") in
+  *Screensaver*) archype-toggle-screensaver ;;
+  *Nightlight*) archype-toggle-nightlight ;;
+  *Idle*) archype-toggle-idle ;;
+  *Bar*) archype-toggle-waybar ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_font_menu() {
+  theme=$(menu "Font" "$(archype-font-list)" "-w 350" "$(archype-font-current)")
+  if [[ "$theme" == "CNCLD" || -z "$theme" ]]; then
+    show_main_menu
+  else
+    archype-font-set "$theme"
+  fi
+}
+
+show_theme_menu() {
+  theme=$(menu "Theme" "$(archype-theme-list)" "" "$(archype-theme-current)")
+  if [[ "$theme" == "CNCLD" || -z "$theme" ]]; then
+    show_main_menu
+  else
+    archype-theme-set "$theme"
+  fi
+}
+
+show_style_menu() {
+  case $(menu "Style" "󰸌  Theme\n  Font\n  Background") in
+  *Theme*) show_theme_menu ;;
+  *Font*) show_font_menu ;;
+  *Background*) archype-theme-bg-next ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_restart_menu() {
+  case $(menu "Restart" "  Hypridle\n  Hyprsunset\n  Swayosd\n󰌧  Walker\n󰍜  Waybar") in
+  *Hypridle*) archype-restart-app hypridle ;;
+  *Hyprsunset*) archype-restart-app hyprsunset ;;
+  *Swayosd*) archype-restart-app swayosd-server ;;
+  *Walker*) archype-restart-app walker ;;
+  *Waybar*) archype-restart-app waybar ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_system_menu() {
+  case $(menu "System" "  Lock\n󱄄  Screensaver\n󰤄  Suspend\n  Relaunch\n󰜉  Restart\n󰐥  Shutdown") in
+  *Lock*) archype-lock-screen ;;
+  *Screensaver*) archype-launch-screensaver force ;;
+  *Suspend*) systemctl suspend ;;
+  *Relaunch*) uwsm stop ;;
+  *Restart*) systemctl reboot ;;
+  *Shutdown*) systemctl poweroff ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_main_menu() {
+  go_to_menu "$(menu "Go" "󰀻  Apps\n  Keybindings\n󰔎  Toggle\n  Style\n  About\n  Restart\n  System")"
+}
+
+go_to_menu() {
+  case "${1,,}" in
+  *apps*) walker -p "Launch…" ;;
+  *keybindings*) archype-menu-keybindings ;;
+  *toggle*) show_toggle_menu ;;
+  *style*) show_style_menu ;;
+  *about*) archype-manage-about ;;
+  *restart*) show_restart_menu ;;
+  *system*) show_system_menu ;;
+  esac
+}
+
+if [[ -n "$1" ]]; then
+  go_to_menu "$1"
+else
+  show_main_menu
+fi

@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -eE
+
+HYPR_CONFIG_FILE="$HOME/.config/hypr/unit.conf"
+
+# This script updates hypr config for a given unit in Hyprland config file for units.
+UNIT_NAME=$1
+UNIT_CONFIG_FILE=$2
+
+if [[ -z "$UNIT_NAME" || -z "$UNIT_CONFIG_FILE" ]]; then
+  echo "Usage: $0 [unit_name] [unit_config_file]"
+  exit 1
+fi
+
+START_TAG="# --- UNIT: ${UNIT_NAME} START ---"
+END_TAG="# --- UNIT: ${UNIT_NAME} END ---"
+
+# Escape for sed safety
+ESCAPED_START=$(printf '%s\n' "$START_TAG" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
+ESCAPED_END=$(printf '%s\n' "$END_TAG" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
+
+# If section already exists, replace it
+if grep -qF "$START_TAG" "$HYPR_CONFIG_FILE"; then
+  echo "Replacing existing config."
+  sed -i "/$ESCAPED_START/,/$ESCAPED_END/{ /$ESCAPED_START/{p; r $UNIT_CONFIG_FILE
+        }; /$ESCAPED_END/p; d }" "$HYPR_CONFIG_FILE"
+else
+  echo "Adding config first time."
+  {
+    echo ""
+    echo "$START_TAG"
+    cat "$UNIT_CONFIG_FILE"
+    echo "$END_TAG"
+  } >> "$HYPR_CONFIG_FILE"
+fi
+
+echo "✅ Updated hypr config for '$UNIT_NAME' in $HYPR_CONFIG_FILE"
+

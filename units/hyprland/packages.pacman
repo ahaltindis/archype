@@ -1,0 +1,29 @@
+alacritty                     # installing as a default terminal
+hyprland
+hyprshot                      # screenshot utility
+satty                         # screenshot edit/save tool that works with hyprshot
+hyprpicker                    # color picker
+hyprlock                      # screen lock
+hypridle                      # track idleness
+hyprsunset                    # screen color filter
+polkit-gnome                  # gnome auth agent for elevated access in GUI apps.
+# hyprpolkitagent             # hypr replacement for gnome polkit? TODO test this
+hyprland-qtutils              # useful utility apps - dialogs, popups.
+waybar                        # statusbar
+mako                          # notification daemon
+swaybg                        # wallpaper tool
+swayosd                       # osd for volume etc
+playerctl                     # to make multimedia play/pause/etc keys functional.
+libqalculate                  # calculate functionality for walker menu
+xdg-desktop-portal-hyprland   # communication through D-Bus (screenshare, file picker)
+xdg-desktop-portal-gtk        # for file picker alonside above
+xdg-user-dirs                 # Provides set of default user directories
+fcitx5                        # Input text/method framework
+fcitx5-gtk
+fcitx5-qt
+wl-clip-persist               # keep clipboard after programs close
+wl-clipboard                  # copy/paste tools for wayland
+uwsm                          # Wayland session manager
+ttf-cascadia-mono-nerd        # default font used in everywhere
+kvantum-qt5                   # Use dark mode for QT apps too (like kdenlive)
+gnome-themes-extra            # Prefer dark everything, adds Adwaita-dark theme

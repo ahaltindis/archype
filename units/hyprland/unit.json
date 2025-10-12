@@ -1,0 +1,25 @@
+{
+  "name": "Hyprland",
+  "description": "Configure Hyprland window manager and utilities.",
+  "version": "1.0.0",
+  "config": [
+    ["alacritty/alacritty.toml", ".config/alacritty/alacritty.toml"],
+    ["mako/config", ".config/mako/config"],
+    ["swayosd/config.toml", ".config/swayosd/config.toml"],
+    ["swayosd/style.css", ".config/swayosd/style.css"],
+    ["walker/config.toml", ".config/walker/config.toml"],
+    ["waybar/config.jsonc", ".config/waybar/config.jsonc"],
+    ["waybar/style.css", ".config/waybar/style.css"],
+    ["autostart.conf", ".config/hypr/autostart.conf"],
+    ["bindings.conf", ".config/hypr/bindings.conf"],
+    ["envs.conf", ".config/hypr/envs.conf"],
+    ["hypridle.conf", ".config/hypr/hypridle.conf"],
+    ["hyprland.conf", ".config/hypr/hyprland.conf"],
+    ["hyprlock.conf", ".config/hypr/hyprlock.conf"],
+    ["hyprsunset.conf", ".config/hypr/hyprsunset.conf"],
+    ["input.conf", ".config/hypr/input.conf"],
+    ["monitors.conf", ".config/hypr/monitors.conf"],
+    ["unit.conf", ".config/hypr/unit.conf"]
+  ],
+  "dependencies": []
+}

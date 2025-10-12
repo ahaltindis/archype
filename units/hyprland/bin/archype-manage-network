@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if command -v impala &>/dev/null; then
+  alacritty --class=Impala -e impala
+  exit 0
+fi
+
+notify-send "Network management software not found"

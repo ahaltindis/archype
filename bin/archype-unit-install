@@ -11,10 +11,12 @@ LIB_DIR="${ARCHYPE_PATH}/lib"
 UNITS_DIR="${ARCHYPE_PATH}/units"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 ARCHYPE_CONFIG="$HOME/.config/archype"
+ARCHYPE_THEMES="$ARCHYPE_CONFIG/themes"
 USER_BIN="$HOME/.local/bin"
 
 mkdir -p ${INSTALL_STATE_DIR}
 mkdir -p ${ARCHYPE_CONFIG}
+mkdir -p ${ARCHYPE_THEMES}
 mkdir -p ${USER_BIN}
 
 source $LIB_DIR/print.sh
@@ -23,26 +25,29 @@ install_packages() {
   local PKG_FILE="$1"
   local PKG_MANAGER="$2"
 
-  # update database for pacman
-  if [ "$PKG_MANAGER" == "pacman" ]; then
-    sudo pacman -Sy
-  fi
-
   if [ -f "$PKG_FILE" ]; then
     print_title "-> Installing packages from $PKG_FILE..."
-    # Read the file line by line and install each package.
+    local packages=()
     while IFS= read -r package; do
       # Trim comments, leading/trailing whitespace from the package name.
       package=$(echo -e "$package" | grep -vE '^\s*#' | awk '{$1=$1};1' | cut -d' ' -f1 | xargs)
       if [ -n "$package" ]; then
-        print_title "  -> Installing: $package"
-        if [ "$PKG_MANAGER" == "pacman" ]; then
-          sudo pacman -S --noconfirm --needed "$package" || print_active "Warning: Failed to install $package."
-        elif [ "$PKG_MANAGER" == "aur" ]; then
-          yay -S --noconfirm "$package" || print_active "Warning: Failed to install $package."
-        fi
+        packages+=("$package")
       fi
     done < "$PKG_FILE"
+    
+    # Install all packages in a single command if any were found
+    if [ ${#packages[@]} -gt 0 ]; then
+      print_title "  -> Installing ${#packages[@]} packages: ${packages[*]}"
+      if [ "$PKG_MANAGER" == "pacman" ]; then
+        sudo pacman -Sy
+        sudo pacman -S --noconfirm --needed "${packages[@]}"
+      elif [ "$PKG_MANAGER" == "aur" ]; then
+        yay -S --noconfirm "${packages[@]}"
+      fi
+    else
+      print_title "  -> No packages to install"
+    fi
   fi
 }
 
@@ -95,6 +100,20 @@ install_unit() {
       print_title "  -> $src_abs -> $dst_abs"
       archype-config-update "$src_abs" "$dst_abs"
     done
+  fi
+
+  if [[ -f "$UNIT_PATH/hypr.conf" ]]; then
+    print_title "-> Updating hypr.conf"
+    archype-unit-hypr-update "$UNIT" "$UNIT_PATH/hypr.conf"
+  fi
+
+  # Install themes by linking each one of them
+  if [[ -d "$UNIT_PATH/themes" ]]; then
+    print_title "-> Linking themes"
+    while IFS= read -r theme; do
+      print_title "  -> $theme -> $ARCHYPE_THEMES"
+      ln -sfn "$theme" "$ARCHYPE_THEMES"
+    done < <(find "$UNIT_PATH/themes" -maxdepth 1 -mindepth 1 -type d)
   fi
 
   # Run unit scripts

@@ -1,7 +1,0 @@
-#!/bin/bash
-
-clear
-echo -e "\033[36m"
-cat <~/.local/share/omarchy/logo-big.txt
-echo -e "\033[0m"
-echo

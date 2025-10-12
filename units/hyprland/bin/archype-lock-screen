@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Lock the screen
+pidof hyprlock || hyprlock &
+
+# TODO: run unit based pre-lock hooks. E.g. password apps
+
+# Avoid running screensaver when locked
+pkill -f "alacritty --class Screensaver"

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if command -v fastfetch &>/dev/null; then
+  alacritty --class Archype -o font.size=9 -e sh -c 'fastfetch; read -n 1 -s'
+  exit 0
+fi
+
+notify-send "About management software not found"

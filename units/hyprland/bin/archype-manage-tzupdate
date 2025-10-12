@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if ! command -v tzupdate &>/dev/null; then
+  notify-send "Time zone update software not found"
+  exit 1
+fi
+
+sudo systemctl restart systemd-timesyncd
+sudo tzupdate
+new_timezone=$(timedatectl show -p Timezone --value)
+archype-restart-app waybar
+notify-send "Time synced and timezone set to $new_timezone"

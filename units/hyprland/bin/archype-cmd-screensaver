@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Exit early if we don't have the tte show
+if ! command -v tte &>/dev/null; then
+  echo "tte not found"
+  exit 1
+fi
+
+CURRENT_SCREENSAVER="$HOME/.config/archype/current/screensaver"
+
+screensaver_in_focus() {
+  if ! command -v hyprctl &>/dev/null; then
+    return 0
+  fi
+  hyprctl activewindow -j | jq -e '.class == "Screensaver"' >/dev/null 2>&1
+}
+
+exit_screensaver() {
+  hyprctl keyword cursor:invisible false 2>/dev/null
+  pkill -x tte 2>/dev/null
+  pkill -f "alacritty --class Screensaver" 2>/dev/null
+  exit 0
+}
+
+trap exit_screensaver SIGINT SIGTERM SIGHUP SIGQUIT
+
+hyprctl keyword cursor:invisible true 2>/dev/null
+
+while true; do
+  effect=$(tte 2>&1 | grep -oP '{\K[^}]+' | tr ',' ' ' | tr ' ' '\n' | sed -n '/^beams$/,$p' | sort -u | shuf -n1)
+  tte -i $CURRENT_SCREENSAVER \
+    --frame-rate 240 --canvas-width 0 --canvas-height $(($(tput lines) - 2)) --anchor-canvas c --anchor-text c \
+    "$effect" &
+
+  while pgrep -x tte >/dev/null; do
+    if read -n 1 -t 3 || ! screensaver_in_focus; then
+      exit_screensaver
+    fi
+  done
+done

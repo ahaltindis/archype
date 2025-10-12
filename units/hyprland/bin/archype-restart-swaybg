@@ -1,0 +1,5 @@
+#!/bin/bash
+
+CURRENT_BACKGROUND_LINK="$HOME/.config/archype/current/background"
+
+archype-restart-app swaybg -i "$CURRENT_BACKGROUND_LINK" -m fill

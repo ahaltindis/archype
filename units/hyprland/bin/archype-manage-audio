@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [[ $1 == "action" ]]; then
+  if command -v pamixer &>/dev/null; then
+    # mute
+    pamixer -t
+    exit 0
+  fi
+
+  notify-send "Audio management software not found"
+fi
+
+if command -v wiremix &>/dev/null; then
+  alacritty --class=Wiremix -e wiremix 
+  exit 0
+fi
+
+notify-send "Audio management software not found"

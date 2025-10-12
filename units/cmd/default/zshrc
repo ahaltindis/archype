@@ -50,6 +50,8 @@ zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
 
 # Key Bindings
+# ctrl+r should be enabled by default by tmux overrides it
+bindkey '^R' history-incremental-search-backward  # Ctrl+R
 bindkey "^P" up-line-or-beginning-search    # Ctrl+P
 bindkey "^N" down-line-or-beginning-search  # Ctrl+N
 bindkey '^[[Z' reverse-menu-complete        # Shift-Tab

@@ -72,12 +72,12 @@ install_unit() {
   # Link config directory
   if [[ -d "$UNIT_PATH/default" ]]; then
     print_title "-> Linking config directory"
-    if [ -e "$UNIT_DEFAULT_CONFIG" ]; then
+    if [ -L "$UNIT_DEFAULT_CONFIG" ]; then
       print_title "  -> Found $UNIT_DEFAULT_CONFIG, removing it!"
       rm -r "$UNIT_DEFAULT_CONFIG"
     fi
     print_title "  -> $UNIT_PATH/default -> $UNIT_DEFAULT_CONFIG"
-      ln -sn "$UNIT_PATH/default" "$UNIT_DEFAULT_CONFIG"
+    ln -sn "$UNIT_PATH/default" "$UNIT_DEFAULT_CONFIG"
   fi
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then

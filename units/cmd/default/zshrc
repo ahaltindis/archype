@@ -1,0 +1,64 @@
+# Modules - (-z) zsh modules  (-U) on first usage
+autoload -Uz colors && colors
+autoload -Uz compinit && compinit
+autoload -Uz add-zsh-hook
+autoload -Uz vcs_info
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+
+# Options
+setopt extendedglob        # advanced globbing
+setopt histignoredups      # no duplicate history entries
+setopt sharehistory        # share history across sessions
+setopt inc_append_history  # append history immediately
+setopt auto_menu           # show menu on second tab
+setopt prompt_subst        # enable running functions in prompt
+
+HISTFILE=~/.zsh_history
+HISTSIZE=32768
+SAVEHIST=32768
+
+export LS_COLORS='rs=0:di=01;34:ln=01;36:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:su=37;41:sg=30;43:tw=30;42:ow=34;42:st=37;44:ex=01;32:';
+export ARCHYPE_CONFIG_PATH="$HOME/.config/archype"
+export PATH="$HOME/.local/bin:$PATH"
+
+# Prompt
+zstyle ':vcs_info:*' enable git
+zstyle ':vcs_info:git:*' check-for-changes true
+zstyle ':vcs_info:git:*' stagedstr   " %{$fg[yellow]%}%1{✗%}"
+zstyle ':vcs_info:git:*' unstagedstr " %{$fg[yellow]%}%1{✗%}"
+# %b → branch  %u → unstaged marker  %c → staged marker
+zstyle ':vcs_info:git:*' formats "%{$fg_bold[blue]%}(%{$fg[red]%}%b%{$fg[blue]%})%u%c "
+zstyle ':vcs_info:git:*' actionformats "%{$fg_bold[blue]%}(%{$fg[red]%}%b%{$fg[blue]%})%u%c "
+
+PROMPT_CHAR=">"
+PROMPT="%{$fg_bold[cyan]%}[%c]%{$resegt_color%}"
+PROMPT+=' ${vcs_info_msg_0_}'
+PROMPT+="%(?:%{$fg_bold[green]%}%1{${PROMPT_CHAR}%}:%{$fg_bold[red]%}%1{${PROMPT_CHAR}%}) %{$reset_color%}"
+
+# Hooks
+add-zsh-hook precmd vcs_info
+
+# Select in menu
+zstyle ':completion:*' menu select
+# Autocompletion ignores case (e.g., cd dOc → cd Doc).
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+# Enable colors
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# Define widgets to be able to bind keys to them
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+
+# Key Bindings
+bindkey "^P" up-line-or-beginning-search    # Ctrl+P
+bindkey "^N" down-line-or-beginning-search  # Ctrl+N
+bindkey '^[[Z' reverse-menu-complete        # Shift-Tab
+if [[ -n "${terminfo[kcbt]}" ]]; then
+  bindkey "${terminfo[kcbt]}" reverse-menu-complete
+fi
+
+# Source unit scripts for aliases, functions etc.
+for file in "$ARCHYPE_CONFIG_PATH"/***/*.zsh(N); do
+  [[ -r $file ]] && source "$file"
+done
+

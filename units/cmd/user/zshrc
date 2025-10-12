@@ -1,9 +1,0 @@
-source ~/.config/archype/cmd/zshrc
-
-# Add your own exports, aliases, and functions here.
-#
-# Make an alias for invoking commands you use constantly
-# alias p='python'
-#
-# Use VSCode instead of neovim as your default editor
-# export EDITOR="code"

@@ -5,13 +5,12 @@ set -eE
 export ARCHYPE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
 BIN_DIR="${ARCHYPE_PATH}/bin"
-LIB_DIR="${ARCHYPE_PATH}/lib"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 USER_BIN_DIR="$HOME/.local/bin"
 
 export PATH="$USER_BIN_DIR:$PATH"
 
-source $LIB_DIR/print.sh
+source ${ARCHYPE_PATH}/lib/print.sh
 
 UNITS=("preflight" "identity" "cmd")
 

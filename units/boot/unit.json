@@ -1,0 +1,9 @@
+{
+  "name": "Boot",
+  "description": "Configure boot process",
+  "version": "1.0.0",
+  "system": [
+    ["sddm_autologin.conf", "/etc/sddm.conf.d/autologin.conf"]
+  ],
+  "dependencies": []
+}

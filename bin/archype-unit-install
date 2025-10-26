@@ -102,6 +102,24 @@ install_unit() {
     done
   fi
 
+  if [[ -f "$UNIT_PATH/unit.json" ]]; then
+    print_title "-> Checking system configs"
+    jq -c '.system[]' "$UNIT_PATH/unit.json" | while read -r pair; do
+      src=$(echo "$pair" | jq -r '.[0]')
+      dst=$(echo "$pair" | jq -r '.[1]')
+
+      src_abs="$UNIT_PATH/system/$src"
+      dst_abs="$dst"
+      if [[ ! -f "$src_abs" ]]; then
+        print_error "Config file cannot be found in the Archype source!"
+        return 1
+      fi
+      print_title "  -> $src_abs -> $dst_abs"
+      # trick for sudo to find binary file with full path
+      sudo $(which archype-config-update) "$src_abs" "$dst_abs"
+    done
+  fi
+
   if [[ -f "$UNIT_PATH/hypr.conf" ]]; then
     print_title "-> Updating hypr.conf"
     archype-unit-hypr-update "$UNIT" "$UNIT_PATH/hypr.conf"

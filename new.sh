@@ -12,7 +12,7 @@ export PATH="$USER_BIN_DIR:$PATH"
 
 source ${ARCHYPE_PATH}/lib/print.sh
 
-UNITS=("preflight" "identity" "cmd" "hyprland")
+UNITS=("preflight" "identity" "cmd" "hyprland" "boot")
 
 catch_errors() {
   print_error "\nArchype installation failed!"

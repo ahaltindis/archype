@@ -1,70 +1,114 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
 set -eE
 
-export PATH="$HOME/.local/share/omarchy/bin:$PATH"
-OMARCHY_INSTALL=~/.local/share/omarchy/install
+export ARCHYPE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
+BIN_DIR="${ARCHYPE_PATH}/bin"
+INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
+USER_BIN_DIR="$HOME/.local/bin"
 
-omarchy-show-logo
+export PATH="$USER_BIN_DIR:$PATH"
 
-# Preparation
-source $OMARCHY_INSTALL/preflight/trap-errors.sh
-source $OMARCHY_INSTALL/preflight/guard.sh
-source $OMARCHY_INSTALL/preflight/package-manager.sh
-source $OMARCHY_INSTALL/preflight/migrations.sh
-source $OMARCHY_INSTALL/preflight/first-run-mode.sh
+source ${ARCHYPE_PATH}/lib/print.sh
 
-# Configuration
-source $OMARCHY_INSTALL/config/hardware/network.sh
-source $OMARCHY_INSTALL/config/hardware/fix-fkeys.sh
-source $OMARCHY_INSTALL/config/hardware/bluetooth.sh
-source $OMARCHY_INSTALL/config/hardware/printer.sh
-source $OMARCHY_INSTALL/config/hardware/usb-autosuspend.sh
-source $OMARCHY_INSTALL/config/hardware/ignore-power-button.sh
-source $OMARCHY_INSTALL/config/hardware/nvidia.sh
+UNITS=("preflight" "identity" "cmd" "hyprland" "boot")
 
-source $OMARCHY_INSTALL/config/identification.sh
-source $OMARCHY_INSTALL/config/branding.sh
-source $OMARCHY_INSTALL/config/terminal.sh
-source $OMARCHY_INSTALL/config/git.sh
-source $OMARCHY_INSTALL/config/gpg.sh
-source $OMARCHY_INSTALL/config/security.sh
-source $OMARCHY_INSTALL/config/theme.sh
-source $OMARCHY_INSTALL/config/fonts.sh
-# Apps
-source $OMARCHY_INSTALL/apps/alacritty.sh
-# Desktop
-source $OMARCHY_INSTALL/desktop/hyprland.sh
+catch_errors() {
+  print_error "\nArchype installation failed!"
+  print_error "\nThis command halted with exit code $?:"
+  print_error "$BASH_COMMAND"
+  print_active "\nYou can retry by running: bash $ARCHYPE_PATH/install.sh"
+}
 
-# source $OMARCHY_INSTALL/config/xcompose.sh
-# source $OMARCHY_INSTALL/config/mise-ruby.sh
-# source $OMARCHY_INSTALL/config/docker.sh
-# source $OMARCHY_INSTALL/config/mimetypes.sh
-# source $OMARCHY_INSTALL/config/localdb.sh
+trap catch_errors ERR
 
-# Packaging
-# source $OMARCHY_INSTALL/packages.sh
-# source $OMARCHY_INSTALL/packaging/asdcontrol.sh
-# source $OMARCHY_INSTALL/packaging/lazyvim.sh
-# source $OMARCHY_INSTALL/packaging/webapps.sh
-# source $OMARCHY_INSTALL/packaging/tuis.sh
+mkdir -p ${INSTALL_STATE_DIR}
+mkdir -p ${USER_BIN_DIR}
 
-# Login
-# source $OMARCHY_INSTALL/login/plymouth.sh
-# source $OMARCHY_INSTALL/login/limine-snapper.sh
-# source $OMARCHY_INSTALL/login/alt-bootloaders.sh
+declare -a to_install
+declare -A installed
 
-# Reboot
-# clear
-# tte -i ~/.local/share/omarchy/logo.txt --frame-rate 920 laseretch
-# echo
-# echo "You're done! So we're ready to reboot now..." | tte --frame-rate 640 wipe
-#
-# if sudo test -f /etc/sudoers.d/99-omarchy-installer; then
-#   sudo rm -f /etc/sudoers.d/99-omarchy-installer &>/dev/null
-#   echo -e "\nRemember to remove USB installer!\n\n"
-# fi
-#
-# sleep 5
-# reboot
+check_already_installed() {
+  print_title "Checking already installed units.."
+  local starting_unit
+  local unit
+  for unit in "${UNITS[@]}"; do
+    if [[ -z "$starting_unit" && ! -f "$INSTALL_STATE_DIR/$unit.done" ]]; then
+      starting_unit=$unit
+    fi
+    if [[ -n "$starting_unit" ]]; then
+      to_install+=("$unit")
+      rm -f "$INSTALL_STATE_DIR/$unit.done"
+      continue
+    fi
+    print_inactive "=> $unit [already installed]"
+  done
+  if [[ -z "$starting_unit" ]]; then
+    print_active "\nNothing left to install"
+    return 0
+  elif [[ "$starting_unit" == "${UNITS[0]}" ]]; then
+    print_active "\nUnit installation will start with '$starting_unit' unit."
+  else
+    print_active "\nUnit installation will continue with '$starting_unit' unit."
+  fi
+  echo ""
+  read -p "Press [Enter] to continue or Ctrl+C to cancel..."
+}
+
+print_status() {
+  clear
+  print_logo
+  local unit
+  for unit in "${to_install[@]}"; do
+    if [[ ${installed[$unit]} ]]; then
+      print_success "=> $unit [installed]"
+    else
+      print_active "=> $unit [installing..]"
+      break
+    fi
+  done
+  print_title "-----------------------------"
+}
+
+copy_unit_install_bin() {
+  local file="archype-unit-install"
+  print_title "  -> Linking $BIN_DIR/$file -> $USER_BIN_DIR/"
+  ln -sf "$BIN_DIR/$file" "$USER_BIN_DIR/"
+}
+
+install_prerequisites() {
+  local -a packages
+  packages=("gum" "jq")
+
+  local pkg
+  for pkg in "${packages[@]}"; do
+    if ! command -v $pkg &>/dev/null; then
+      print_title "  -> Installing prerequisite package '$pkg'"
+      sudo pacman -S --noconfirm --needed "$pkg"
+    fi
+  done
+}
+
+main() {
+  clear
+  print_logo
+  print_title "Starting installation.."
+
+  copy_unit_install_bin
+
+  install_prerequisites
+
+  check_already_installed
+
+  local unit
+  for unit in "${to_install[@]}"; do
+    print_status
+    archype-unit-install "$unit"
+    installed["$unit"]=1
+  done
+
+  print_success "\nInstallation completed. Restart the computer!"
+}
+
+main

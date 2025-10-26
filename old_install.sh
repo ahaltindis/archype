@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Exit immediately if a command exits with a non-zero status
+set -eE
+
+export PATH="$HOME/.local/share/omarchy/bin:$PATH"
+OMARCHY_INSTALL=~/.local/share/omarchy/install
+
+omarchy-show-logo
+
+# Preparation
+source $OMARCHY_INSTALL/preflight/trap-errors.sh
+source $OMARCHY_INSTALL/preflight/guard.sh
+source $OMARCHY_INSTALL/preflight/package-manager.sh
+source $OMARCHY_INSTALL/preflight/migrations.sh
+source $OMARCHY_INSTALL/preflight/first-run-mode.sh
+
+# Configuration
+source $OMARCHY_INSTALL/config/hardware/network.sh
+source $OMARCHY_INSTALL/config/hardware/fix-fkeys.sh
+source $OMARCHY_INSTALL/config/hardware/bluetooth.sh
+source $OMARCHY_INSTALL/config/hardware/printer.sh
+source $OMARCHY_INSTALL/config/hardware/usb-autosuspend.sh
+source $OMARCHY_INSTALL/config/hardware/ignore-power-button.sh
+source $OMARCHY_INSTALL/config/hardware/nvidia.sh
+
+source $OMARCHY_INSTALL/config/identification.sh
+source $OMARCHY_INSTALL/config/branding.sh
+source $OMARCHY_INSTALL/config/terminal.sh
+source $OMARCHY_INSTALL/config/git.sh
+source $OMARCHY_INSTALL/config/gpg.sh
+source $OMARCHY_INSTALL/config/security.sh
+source $OMARCHY_INSTALL/config/theme.sh
+source $OMARCHY_INSTALL/config/fonts.sh
+
+# Apps
+source $OMARCHY_INSTALL/apps/alacritty.sh
+# source $OMARCHY_INSTALL/apps/asdcontrol.sh
+# source $OMARCHY_INSTALL/apps/lazyvim.sh
+# source $OMARCHY_INSTALL/apps/webapps.sh
+# source $OMARCHY_INSTALL/apps/tuis.sh
+# source $OMARCHY_INSTALL/packages.sh
+
+# Desktop
+source $OMARCHY_INSTALL/desktop/hyprland.sh
+
+# source $OMARCHY_INSTALL/config/xcompose.sh
+# source $OMARCHY_INSTALL/config/mise-ruby.sh
+# source $OMARCHY_INSTALL/config/docker.sh
+# source $OMARCHY_INSTALL/config/mimetypes.sh
+# source $OMARCHY_INSTALL/config/localdb.sh
+
+# Reboot
+# clear
+# tte -i ~/.local/share/omarchy/logo.txt --frame-rate 920 laseretch
+# echo
+# echo "You're done! So we're ready to reboot now..." | tte --frame-rate 640 wipe
+#
+# if sudo test -f /etc/sudoers.d/99-omarchy-installer; then
+#   sudo rm -f /etc/sudoers.d/99-omarchy-installer &>/dev/null
+#   echo -e "\nRemember to remove USB installer!\n\n"
+# fi
+#
+# sleep 5
+# reboot

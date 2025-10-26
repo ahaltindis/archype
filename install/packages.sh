@@ -32,7 +32,6 @@ sudo pacman -S --noconfirm --needed \
   omarchy-chromium \
   pamixer \
   pinta \
-  plymouth \
   postgresql-libs \
   power-profiles-daemon \
   python-gobject \

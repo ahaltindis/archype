@@ -87,7 +87,7 @@ install_unit() {
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then
     print_title "-> Checking user configs"
-    jq -c '.config[]' "$UNIT_PATH/unit.json" | while read -r pair; do
+    jq -c '.config[]?' "$UNIT_PATH/unit.json" | while read -r pair; do
       src=$(echo "$pair" | jq -r '.[0]')
       dst=$(echo "$pair" | jq -r '.[1]')
 
@@ -104,7 +104,7 @@ install_unit() {
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then
     print_title "-> Checking system configs"
-    jq -c '.system[]' "$UNIT_PATH/unit.json" | while read -r pair; do
+    jq -c '.system[]?' "$UNIT_PATH/unit.json" | while read -r pair; do
       src=$(echo "$pair" | jq -r '.[0]')
       dst=$(echo "$pair" | jq -r '.[1]')
 

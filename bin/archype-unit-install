@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eE
+set -eEo pipefail
 
 if [ -z "$ARCHYPE_PATH" ]; then
   echo -e "Error: 'ARCHYPE_PATH' is not defined."

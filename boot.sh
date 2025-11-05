@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eEo pipefail
+
 ansi_art='
  █████╗ ██████╗  ██████╗██╗  ██╗██╗   ██╗██████╗ ███████╗
 ██╔══██╗██╔══██╗██╔════╝██║  ██║╚██╗ ██╔╝██╔══██╗██╔════╝
@@ -31,5 +33,12 @@ if [[ $ARCHYPE_REF != "main" ]]; then
   cd -
 fi
 
+LOGS_DIR=~/.local/log/archype
+mkdir -p ${LOGS_DIR}
+
+LOG_FILE=${LOGS_DIR}/install_$(date +%Y%m%d_%H%M%S).log
+
 echo -e "\nInstallation starting..."
-~/.local/share/archype/install.sh
+~/.local/share/archype/install.sh 2>&1 | tee -a $LOG_FILE
+
+echo "Log saved to: $LOG_FILE"

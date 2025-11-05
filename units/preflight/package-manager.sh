@@ -7,7 +7,10 @@ fi
 
 # Install yay for AUR
 if ! command -v yay &>/dev/null; then
-  cd /tmp
+  mkdir -p /tmp/archype
+  cd /tmp/archype
+  rm -rf aur
+  rm -rf yay-bin
   print_normal "Cloning yay-bin from Github mirror."
   git clone --branch yay-bin --single-branch https://github.com/archlinux/aur.git
   cd yay-bin

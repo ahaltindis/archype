@@ -7,6 +7,7 @@ LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
 BIN_DIR="${ARCHYPE_PATH}/bin"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 USER_BIN_DIR="$HOME/.local/bin"
+TMP_DIR="/tmp/archype"
 
 export PATH="$USER_BIN_DIR:$PATH"
 
@@ -15,6 +16,7 @@ source ${ARCHYPE_PATH}/lib/print.sh
 UNITS=("preflight" "identity" "cmd" "hyprland" "boot")
 
 catch_errors() {
+  rm -rf ${TMP_DIR}
   print_error "\nArchype installation failed!"
   print_error "\nThis command halted with exit code $?:"
   print_error "$BASH_COMMAND"
@@ -25,6 +27,7 @@ trap catch_errors ERR
 
 mkdir -p ${INSTALL_STATE_DIR}
 mkdir -p ${USER_BIN_DIR}
+mkdir -p ${TMP_DIR}
 
 declare -a to_install
 declare -A installed
@@ -108,6 +111,7 @@ main() {
     installed["$unit"]=1
   done
 
+  rm -rf ${TMP_DIR}
   print_success "\nInstallation completed. Restart the computer!"
 }
 

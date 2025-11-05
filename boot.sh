@@ -10,6 +10,8 @@ ansi_art='
 
 clear
 echo -e "\n$ansi_art\n"
+echo -e "\nInstallation starting..."
+sleep 1
 
 sudo pacman -Syu --noconfirm --needed git
 
@@ -30,4 +32,4 @@ if [[ $ARCHYPE_REF != "main" ]]; then
 fi
 
 echo -e "\nInstallation starting..."
-source ~/.local/share/archype/install.sh
+~/.local/share/archype/install.sh

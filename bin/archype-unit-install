@@ -30,7 +30,7 @@ install_packages() {
     local packages=()
     while IFS= read -r package; do
       # Trim comments, leading/trailing whitespace from the package name.
-      package=$(echo -e "$package" | grep -vE '^\s*#' | awk '{$1=$1};1' | cut -d' ' -f1 | xargs)
+      package=$(echo -e "$package" | xargs | awk '!/^\s*#/ {print $1; exit}')
       if [ -n "$package" ]; then
         packages+=("$package")
       fi

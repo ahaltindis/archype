@@ -10,7 +10,7 @@ setopt extendedglob        # advanced globbing
 setopt histignoredups      # no duplicate history entries
 setopt sharehistory        # share history across sessions
 setopt inc_append_history  # append history immediately
-setopt auto_menu           # show menu on second tab
+setopt menu_complete       # Auto complete first item from menu
 setopt prompt_subst        # enable running functions in prompt
 
 HISTFILE=~/.zsh_history
@@ -24,7 +24,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # Prompt
 zstyle ':vcs_info:*' enable git
 zstyle ':vcs_info:git:*' check-for-changes true
-zstyle ':vcs_info:git:*' stagedstr   " %{$fg[yellow]%}%1{✗%}"
+zstyle ':vcs_info:git:*' stagedstr   " %{$fg[yellow]%}%1{*%}"
 zstyle ':vcs_info:git:*' unstagedstr " %{$fg[yellow]%}%1{✗%}"
 # %b → branch  %u → unstaged marker  %c → staged marker
 zstyle ':vcs_info:git:*' formats "%{$fg_bold[blue]%}(%{$fg[red]%}%b%{$fg[blue]%})%u%c "
@@ -38,8 +38,8 @@ PROMPT+="%(?:%{$fg_bold[green]%}%1{${PROMPT_CHAR}%}:%{$fg_bold[red]%}%1{${PROMPT
 # Hooks
 add-zsh-hook precmd vcs_info
 
-# Select in menu
-zstyle ':completion:*' menu select
+# Show selection in menu (note, this requires double enter to actually use the item, which I don't like)
+# zstyle ':completion:*' menu select
 # Autocompletion ignores case (e.g., cd dOc → cd Doc).
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Enable colors

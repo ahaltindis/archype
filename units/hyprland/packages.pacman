@@ -8,7 +8,7 @@ hypridle                      # track idleness
 hyprsunset                    # screen color filter
 polkit-gnome                  # gnome auth agent for elevated access in GUI apps.
 # hyprpolkitagent             # hypr replacement for gnome polkit? TODO test this
-hyprland-qtutils              # useful utility apps - dialogs, popups.
+hyprland-guiutils             # useful utility apps - dialogs, popups.
 waybar                        # statusbar
 mako                          # notification daemon
 swaybg                        # wallpaper tool

@@ -45,7 +45,6 @@ sudo pacman -S --noconfirm --needed \
   tzupdate \
   ufw \
   ufw-docker \
-  walker-bin \
   wf-recorder \
   wiremix \
   wireplumber \

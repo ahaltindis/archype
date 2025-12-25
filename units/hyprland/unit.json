@@ -7,7 +7,6 @@
     ["mako/config", ".config/mako/config"],
     ["swayosd/config.toml", ".config/swayosd/config.toml"],
     ["swayosd/style.css", ".config/swayosd/style.css"],
-    ["walker/config.toml", ".config/walker/config.toml"],
     ["waybar/config.jsonc", ".config/waybar/config.jsonc"],
     ["waybar/style.css", ".config/waybar/style.css"],
     ["autostart.conf", ".config/hypr/autostart.conf"],

@@ -14,7 +14,7 @@ mako                          # notification daemon
 swaybg                        # wallpaper tool
 swayosd                       # osd for volume etc
 playerctl                     # to make multimedia play/pause/etc keys functional.
-libqalculate                  # calculate functionality for walker menu
+libqalculate                  # calculate functionality for menu
 xdg-desktop-portal-hyprland   # communication through D-Bus (screenshare, file picker)
 xdg-desktop-portal-gtk        # for file picker alonside above
 xdg-user-dirs                 # Provides set of default user directories

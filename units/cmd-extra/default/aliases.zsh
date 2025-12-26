@@ -13,12 +13,6 @@ zd() {
     z "$@" && printf "\U000F17A9 " && pwd || echo "Error: Directory not found"
   fi
 }
-open() {
-  xdg-open "$@" >/dev/null 2>&1 &
-}
-
-# Tools
-n() { if [ "$#" -eq 0 ]; then nvim .; else nvim "$@"; fi; }
 
 # todo: test this
 # Turns off hashing → Bash will not remember command locations.

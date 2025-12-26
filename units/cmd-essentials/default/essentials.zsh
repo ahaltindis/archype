@@ -1,3 +1,19 @@
+# Environment
+export EDITOR="nvim"
+export SUDO_EDITOR="$EDITOR"
+
+
+# Init
+eval "$(mise activate zsh)"
+
+
+# Functions
+open() {
+  xdg-open "$@" >/dev/null 2>&1 &
+}
+
+n() { if [ "$#" -eq 0 ]; then nvim .; else nvim "$@"; fi; }
+
 # Transcode a video to a good-balance 1080p that's great for sharing online
 transcode-video-1080p() {
   ffmpeg -i $1 -vf scale=1920:1080 -c:v libx264 -preset fast -crf 23 -c:a copy ${1%.*}-1080p.mp4

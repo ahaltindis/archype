@@ -1,0 +1,9 @@
+{
+  "name": "Cmd Essentials",
+  "description": "Essential cmd tools.",
+  "version": "1.0.0",
+  "config": [
+    ["git.conf", ".config/git/config", "s"]
+  ],
+  "dependencies": []
+}

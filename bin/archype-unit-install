@@ -3,8 +3,12 @@
 set -eEo pipefail
 
 if [ -z "$ARCHYPE_PATH" ]; then
-  echo -e "Error: 'ARCHYPE_PATH' is not defined."
-  exit 1
+  # Try to get it from the source of this file
+  ARCHYPE_PATH="$(readlink "$(which "${BASH_SOURCE[0]}")" | xargs dirname | xargs dirname)"
+  if [ -z "$ARCHYPE_PATH" ]; then
+    echo -e "Error: 'ARCHYPE_PATH' is not defined."
+    exit 1
+  fi
 fi
 
 LIB_DIR="${ARCHYPE_PATH}/lib"
@@ -56,7 +60,7 @@ install_unit() {
   local UNIT_PATH="$UNITS_DIR/$UNIT"
   local UNIT_DEFAULT_CONFIG="$ARCHYPE_CONFIG/$UNIT"
   if [ ! -d "$UNIT_PATH" ]; then
-    print_error "Error: Unit directory '$UNIT_PATH' not found."
+    print_error "Error: Unit cannot be found in directory '$UNIT_PATH'"
     exit 1
   fi
   print_active "Unit: $UNIT"
@@ -90,6 +94,14 @@ install_unit() {
     jq -c '.config[]?' "$UNIT_PATH/unit.json" | while read -r pair; do
       src=$(echo "$pair" | jq -r '.[0]')
       dst=$(echo "$pair" | jq -r '.[1]')
+      flg=$(echo "$pair" | jq -r '.[2]')
+      if [[ "$flg" == "null" ]]; then
+        flg=""
+      fi
+
+      if [[ "$flg" == *"s"* ]]; then
+        skip_existing=1
+      fi
 
       src_abs="$UNIT_PATH/config/$src"
       dst_abs="$HOME/$dst"
@@ -97,7 +109,13 @@ install_unit() {
         print_error "Config file cannot be found in the Archype source!"
         return 1
       fi
-      print_title "  -> $src_abs -> $dst_abs"
+
+      if [[ -f "$dst_abs" && "$skip_existing" ]]; then
+        print_title "  -> [$flg] $src_abs -> $dst_abs  -- SKIPPED"
+        continue
+      fi
+
+      print_title "  -> [$flg] $src_abs -> $dst_abs"
       archype-config-update "$src_abs" "$dst_abs"
     done
   fi
@@ -143,5 +161,10 @@ install_unit() {
   print_success "\n$UNIT installed successfully."
   touch "$INSTALL_STATE_DIR/$UNIT.done"
 }
+
+if [ -z "$1" ]; then
+  print_error "Error: Unit name should be provided."
+  exit 1
+fi
 
 install_unit "$1"

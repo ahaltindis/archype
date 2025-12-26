@@ -3,12 +3,28 @@
 # Set nice plain spinner with Arch Linux logo
 sudo plymouth-set-default-theme spinner
 
+# Find config location
+if [[ -f /boot/EFI/arch-limine/limine.conf ]]; then
+  limine_config="/boot/EFI/arch-limine/limine.conf"
+elif [[ -f /boot/EFI/BOOT/limine.conf ]]; then
+  limine_config="/boot/EFI/BOOT/limine.conf"
+elif [[ -f /boot/EFI/limine/limine.conf ]]; then
+  limine_config="/boot/EFI/limine/limine.conf"
+elif [[ -f /boot/limine/limine.conf ]]; then
+  limine_config="/boot/limine/limine.conf"
+elif [[ -f /boot/limine.conf ]]; then
+  limine_config="/boot/limine.conf"
+else
+  echo "Error: /boot limine config not found" >&2
+  exit 1
+fi
+
 # Update Limine bootloader config
 sudo sed -i '/^\/Arch Linux (linux)$/,/^$/ {
   /^[[:space:]]*cmdline:/ {
     /quiet/! { /splash/! s/rw/rw quiet splash/ }
   }
-}' /boot/limine/limine.conf
+}' "$limine_config"
 
 # Add plymouth splash hook to initramfs
 if ! grep -Eq '^HOOKS=.*plymouth' /etc/mkinitcpio.conf; then

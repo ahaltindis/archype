@@ -4,6 +4,16 @@
   "version": "1.0.0",
   "config": [
     ["git.conf", ".config/git/config", "s"]
+    ["nvim/lua/config/autocmds.lua", ".config/nvim/lua/config/autocmds.lua"]
+    ["nvim/lua/config/keymaps.lua", ".config/nvim/lua/config/keymaps.lua"]
+    ["nvim/lua/config/lazy.lua", ".config/nvim/lua/config/lazy.lua"]
+    ["nvim/lua/config/options.lua", ".config/nvim/lua/config/options.lua"]
+    ["nvim/lua/plugins/archype.lua", ".config/nvim/lua/plugins/archype.lua"]
+    ["nvim/plugin/after/colors.lua", ".config/nvim/plugin/after/colors.lua"]
+    ["nvim/init.lua", ".config/nvim/init.lua"]
+    ["nvim/lazy-lock.json", ".config/nvim/lazy-lock.json"]
+    ["nvim/lazyvim.json", ".config/nvim/lazyvim.json"]
+    ["nvim/stylua.toml", ".config/nvim/stylua.toml"]
   ],
   "dependencies": []
 }

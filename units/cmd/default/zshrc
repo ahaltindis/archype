@@ -10,7 +10,6 @@ setopt extendedglob        # advanced globbing
 setopt histignoredups      # no duplicate history entries
 setopt sharehistory        # share history across sessions
 setopt inc_append_history  # append history immediately
-setopt menu_complete       # Auto complete first item from menu
 setopt prompt_subst        # enable running functions in prompt
 
 HISTFILE=~/.zsh_history
@@ -38,8 +37,8 @@ PROMPT+="%(?:%{$fg_bold[green]%}%1{${PROMPT_CHAR}%}:%{$fg_bold[red]%}%1{${PROMPT
 # Hooks
 add-zsh-hook precmd vcs_info
 
-# Show selection in menu (note, this requires double enter to actually use the item, which I don't like)
-# zstyle ':completion:*' menu select
+# Show selection in menu
+zstyle ':completion:*' menu select
 # Autocompletion ignores case (e.g., cd dOc → cd Doc).
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Enable colors

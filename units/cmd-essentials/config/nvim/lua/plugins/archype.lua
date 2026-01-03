@@ -19,9 +19,19 @@ return {
     "snacks.nvim",
     opts = {
       picker = {
+        sources = {
+          explorer = {
+            diagnostics = false,
+            layout = {
+              -- I hate when file list continue at beginning after reaching to end
+              cycle = false,
+            },
+          },
+        },
         icons = {
           diagnostics = {
-            -- Match picker (explorer) icons with the editor icons.
+            -- Match picker (explorer) icons with the editor icons
+            -- (even though diagnostics are disabled in explorer)
             Error = "e",
             Warn = "w",
             Hint = "h",

@@ -3,7 +3,7 @@
 # Npm is needed for nvim lspconfig plugin
 mise use --global node@latest
 
-if [[ -z "$(git config get user.name)" ]]; then
+if [[ -z "$(git config user.name)" ]]; then
   USER_NAME=$(gum input --placeholder "Enter full name (git)" --prompt "Name> ")
   if [[ -n "$USER_NAME" ]]; then
     archype-state set identity.user_name "$USER_NAME"
@@ -11,7 +11,7 @@ if [[ -z "$(git config get user.name)" ]]; then
   fi
 fi
 
-if [[ -z "$(git config get user.email)" ]]; then
+if [[ -z "$(git config user.email)" ]]; then
   USER_EMAIL=$(gum input --placeholder "Enter email address (git)" --prompt "Email> ")
   if [[ -n "$USER_EMAIL" ]]; then
     archype-state set identity.user_email "$USER_EMAIL"

@@ -15,7 +15,8 @@ LIB_DIR="${ARCHYPE_PATH}/lib"
 UNITS_DIR="${ARCHYPE_PATH}/units"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
 ARCHYPE_CONFIG="$HOME/.config/archype"
-ARCHYPE_THEMES="$ARCHYPE_CONFIG/themes"
+ARCHYPE_THEMES="${ARCHYPE_CONFIG}/themes"
+PRISTINE_CONFIG="${ARCHYPE_CONFIG}/pristine"
 USER_BIN="$HOME/.local/bin"
 
 mkdir -p ${INSTALL_STATE_DIR}
@@ -23,7 +24,20 @@ mkdir -p ${ARCHYPE_CONFIG}
 mkdir -p ${ARCHYPE_THEMES}
 mkdir -p ${USER_BIN}
 
+# FLAGS
+NO_PKG=""
+
 source $LIB_DIR/print.sh
+
+debug_info() {
+  echo "LIB_DIR=${LIB_DIR}"
+  echo "UNITS_DIR=${UNITS_DIR}"
+  echo "INSTALL_STATE_DIR=${INSTALL_STATE_DIR}"
+  echo "ARCHYPE_CONFIG=${ARCHYPE_CONFIG}"
+  echo "ARCHYPE_THEMES=${ARCHYPE_THEMES}"
+  echo "PRISTINE_CONFIG=${PRISTINE_CONFIG}"
+  echo "USER_BIN=${USER_BIN}"
+}
 
 install_packages() {
   local PKG_FILE="$1"
@@ -39,7 +53,7 @@ install_packages() {
         packages+=("$package")
       fi
     done < "$PKG_FILE"
-    
+
     # Install all packages in a single command if any were found
     if [ ${#packages[@]} -gt 0 ]; then
       print_title "  -> Installing ${#packages[@]} packages: ${packages[*]}"
@@ -59,15 +73,19 @@ install_unit() {
   local UNIT="$1"
   local UNIT_PATH="$UNITS_DIR/$UNIT"
   local UNIT_DEFAULT_CONFIG="$ARCHYPE_CONFIG/$UNIT"
+  local UNIT_PRISTINE_CONFIG="${PRISTINE_CONFIG}/${UNIT}"
+  local UNIT_PRISTINE_CONFIG_NEW="${PRISTINE_CONFIG}/${UNIT}_new"
   if [ ! -d "$UNIT_PATH" ]; then
     print_error "Error: Unit cannot be found in directory '$UNIT_PATH'"
     exit 1
   fi
   print_active "Unit: $UNIT"
 
-  # Package Installation
-  install_packages "$UNIT_PATH/packages.pacman" "pacman"
-  install_packages "$UNIT_PATH/packages.aur" "aur"
+  if [[ ! "$NO_PKG" ]]; then
+    # Package Installation
+    install_packages "$UNIT_PATH/packages.pacman" "pacman"
+    install_packages "$UNIT_PATH/packages.aur" "aur"
+  fi
 
   # Link binary files
   if [[ -d "$UNIT_PATH/bin" ]]; then
@@ -99,25 +117,65 @@ install_unit() {
         flg=""
       fi
 
+      skip_existing=""
       if [[ "$flg" == *"s"* ]]; then
         skip_existing=1
       fi
 
       src_abs="$UNIT_PATH/config/$src"
       dst_abs="$HOME/$dst"
+      pristine_abs="$UNIT_PRISTINE_CONFIG/$src"
+      pristine_abs_new="$UNIT_PRISTINE_CONFIG_NEW/$src"
+
+      # --Logic--
+      # !src
+      #   fail
+      # src exists
+      #   !dst
+      #     override dst
+      #     override pristine
+      #   dst exists
+      #     skip flag
+      #       skip
+      #     pristine exists
+      #       pristine == dst
+      #         override dst
+      #         override pristine
+      #     !pristine or pristine != dst
+      #       copy with backup
+      #       override pristine
+
       if [[ ! -f "$src_abs" ]]; then
         print_error "Config file cannot be found in the Archype source!"
         return 1
       fi
 
-      if [[ -f "$dst_abs" && "$skip_existing" ]]; then
-        print_title "  -> [$flg] $src_abs -> $dst_abs  -- SKIPPED"
+      mkdir -p $(dirname ${dst_abs})
+      mkdir -p $(dirname ${pristine_abs_new})
+      cp -f "$src_abs" "$pristine_abs_new"
+
+      if [[ ! -f "$dst_abs" ]]; then
+        print_title "  -> [override (DST not exists)] $src_abs -> $dst_abs"
+        cp -f "$src_abs" "$dst_abs"
+        continue
+      fi
+
+      if [[ "$skip_existing" ]]; then
+        print_title "  -> [skip] $src_abs -> $dst_abs"
+        continue
+      fi
+
+      if cmp -s "$pristine_abs" "$dst_abs"; then
+        print_title "  -> [override (no change)] $src_abs -> $dst_abs"
+        cp -f "$src_abs" "$dst_abs"
         continue
       fi
 
       print_title "  -> [$flg] $src_abs -> $dst_abs"
       archype-config-update "$src_abs" "$dst_abs"
     done
+    rm -rf ${UNIT_PRISTINE_CONFIG}
+    mv ${UNIT_PRISTINE_CONFIG_NEW} ${UNIT_PRISTINE_CONFIG}
   fi
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then
@@ -165,6 +223,10 @@ install_unit() {
 if [ -z "$1" ]; then
   print_error "Error: Unit name should be provided."
   exit 1
+fi
+
+if [[ "$2" == "--no-pkg" ]]; then
+  NO_PKG="1"
 fi
 
 install_unit "$1"

@@ -1,0 +1,330 @@
+#!/bin/bash
+
+# Test VM for Archype: a fresh Arch base image and a loop to install into it.
+# See docs/v1.md (Testing) for the workflow.
+
+set -eEo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEST_DIR="$REPO_DIR/test"
+VM_DIR="${ARCHYPE_VM_DIR:-$HOME/.local/share/archype-vm}"
+ISO_MIRROR="${ARCHYPE_ISO_MIRROR:-https://geo.mirror.pkgbuild.com/iso/latest}"
+SSH_PORT="${ARCHYPE_VM_SSH_PORT:-2222}"
+
+ISO="$VM_DIR/archlinux-x86_64.iso"
+DISK="$VM_DIR/disk.qcow2"
+DISK_SIZE="40G"
+VARS="$VM_DIR/vars.fd"
+VARS_FRESH="$VM_DIR/vars-fresh.fd"
+KEY="$VM_DIR/id_ed25519"
+SHARE="$VM_DIR/share"
+PIDFILE="$VM_DIR/qemu.pid"
+MONITOR="$VM_DIR/monitor.sock"
+LOG="$VM_DIR/qemu.log"
+OVMF_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
+OVMF_VARS="/usr/share/OVMF/OVMF_VARS_4M.fd"
+
+SETUP_CMD="mount -m -t 9p -o trans=virtio archype /root/share && bash /root/share/setup.sh"
+
+VM_USER="archype"
+SNAPSHOT="fresh"
+
+die() {
+  echo -e "\033[31m$*\033[0m" >&2
+  exit 1
+}
+
+info() {
+  echo -e "\033[36m$*\033[0m"
+}
+
+is_running() {
+  [[ -f $PIDFILE ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+ssh_vm() {
+  ssh -i "$KEY" -p "$SSH_PORT" \
+    -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
+    "$VM_USER@localhost" "$@"
+}
+
+# Sends monitor commands over one connection, waiting for QEMU's prompt after each.
+monitor_cmd() {
+  python3 - "$MONITOR" "$@" <<'PY'
+import socket, sys, time
+
+def read_prompt(s):
+    buf = b""
+    while not buf.endswith(b"(qemu) "):
+        chunk = s.recv(4096)
+        if not chunk:
+            break
+        buf += chunk
+
+s = socket.socket(socket.AF_UNIX)
+s.connect(sys.argv[1])
+s.settimeout(5)
+read_prompt(s)
+for cmd in sys.argv[2:]:
+    s.sendall((cmd + "\n").encode())
+    read_prompt(s)
+    if cmd.startswith("sendkey"):
+        time.sleep(0.02)
+s.close()
+PY
+}
+
+# Types text into the VM as key presses (the console has no clipboard), then Enter.
+type_text() {
+  local text="$1" i c key
+  local -a cmds=()
+  for ((i = 0; i < ${#text}; i++)); do
+    c="${text:i:1}"
+    case "$c" in
+    [a-z0-9]) key="$c" ;;
+    [A-Z]) key="shift-${c,,}" ;;
+    ' ') key="spc" ;;
+    '-') key="minus" ;;
+    '_') key="shift-minus" ;;
+    '=') key="equal" ;;
+    '/') key="slash" ;;
+    '.') key="dot" ;;
+    ',') key="comma" ;;
+    ':') key="shift-semicolon" ;;
+    ';') key="semicolon" ;;
+    '&') key="shift-7" ;;
+    '|') key="shift-backslash" ;;
+    '~') key="shift-grave_accent" ;;
+    "'") key="apostrophe" ;;
+    '"') key="shift-apostrophe" ;;
+    *) die "Can't type character: '$c'" ;;
+    esac
+    cmds+=("sendkey $key")
+  done
+  cmds+=("sendkey ret")
+  monitor_cmd "${cmds[@]}"
+}
+
+wait_for_ssh() {
+  info "Waiting for SSH on port $SSH_PORT..."
+  for _ in $(seq 1 90); do
+    if ssh_vm -o ConnectTimeout=2 true 2>/dev/null; then
+      return 0
+    fi
+    is_running || die "VM exited before SSH came up. See $LOG"
+    sleep 2
+  done
+  die "SSH did not come up in time."
+}
+
+wait_for_exit() {
+  for _ in $(seq 1 60); do
+    is_running || return 0
+    sleep 1
+  done
+  die "VM did not power off in time."
+}
+
+# Starts QEMU in the background with a GTK window. Extra args are appended.
+start_qemu() {
+  is_running && die "VM is already running."
+  [[ -f $DISK ]] || die "No disk. Run: test/vm create"
+
+  qemu-system-x86_64 \
+    -name archype-vm \
+    -enable-kvm -machine q35 -cpu host -smp 4 -m 8G \
+    -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
+    -drive if=pflash,format=raw,file="$VARS" \
+    -drive file="$DISK",if=none,id=disk0,format=qcow2 \
+    -device virtio-blk-pci,drive=disk0,bootindex=1 \
+    -device virtio-vga-gl -display gtk,gl=on \
+    -device qemu-xhci -device usb-tablet \
+    -audiodev pipewire,id=snd0 -device intel-hda -device hda-duplex,audiodev=snd0 \
+    -nic user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:"$SSH_PORT"-:22 \
+    -monitor unix:"$MONITOR",server,nowait \
+    -pidfile "$PIDFILE" \
+    "$@" >"$LOG" 2>&1 &
+
+  sleep 1
+  is_running || die "QEMU failed to start. See $LOG"
+}
+
+cmd_iso() {
+  mkdir -p "$VM_DIR"
+
+  if [[ -f $ISO ]]; then
+    info "ISO already downloaded: $(cat "$ISO.version" 2>/dev/null || echo "$ISO")"
+    return 0
+  fi
+
+  local sums name sum
+  sums=$(curl -fsSL "$ISO_MIRROR/sha256sums.txt")
+  name=$(awk '$2 ~ /^archlinux-[0-9.]+-x86_64\.iso$/ { print $2; exit }' <<<"$sums")
+  sum=$(awk -v n="$name" '$2 == n { print $1 }' <<<"$sums")
+  [[ -n $name && -n $sum ]] || die "Could not read ISO checksum from $ISO_MIRROR"
+
+  info "Downloading $name..."
+  if ! echo "$sum  $ISO.part" | sha256sum -c --status 2>/dev/null; then
+    curl -fL -C - -o "$ISO.part" "$ISO_MIRROR/$name"
+  fi
+
+  if ! echo "$sum  $ISO.part" | sha256sum -c --status; then
+    rm -f "$ISO.part"
+    die "Checksum mismatch, removed the download. Run again."
+  fi
+
+  mv "$ISO.part" "$ISO"
+  echo "$name" >"$ISO.version"
+  info "ISO verified: $name"
+}
+
+cmd_create() {
+  [[ -f $DISK ]] && die "Disk already exists. Run 'test/vm destroy' first."
+  cmd_iso
+
+  [[ -f $KEY ]] || ssh-keygen -q -t ed25519 -N "" -C archype-vm -f "$KEY"
+
+  # Stage archinstall files for the live ISO; the SSH key is added via a custom command.
+  rm -rf "$SHARE"
+  mkdir -p "$SHARE"
+  local pubkey
+  pubkey=$(cat "$KEY.pub")
+  jq --arg key "$pubkey" --arg user "$VM_USER" '.custom_commands = [
+    "install -d -m 700 -o \($user) -g \($user) /home/\($user)/.ssh && echo \"\($key)\" > /home/\($user)/.ssh/authorized_keys && chown \($user):\($user) /home/\($user)/.ssh/authorized_keys && chmod 600 /home/\($user)/.ssh/authorized_keys"
+  ]' "$TEST_DIR/archinstall.json" >"$SHARE/archinstall.json"
+  cp "$TEST_DIR/archinstall-creds.json" "$SHARE/creds.json"
+  cat >"$SHARE/setup.sh" <<'SH'
+#!/bin/bash
+set -e
+archinstall --config /root/share/archinstall.json --creds /root/share/creds.json --silent
+poweroff
+SH
+
+  qemu-img create -q -f qcow2 "$DISK" "$DISK_SIZE"
+  cp "$OVMF_VARS" "$VARS"
+
+  start_qemu \
+    -drive file="$ISO",if=none,id=cd0,media=cdrom,readonly=on \
+    -device ide-cd,drive=cd0,bus=ide.0,bootindex=0 \
+    -virtfs local,path="$SHARE",mount_tag=archype,security_model=none,readonly=on
+
+  info "\nThe Arch ISO is booting."
+  read -r -p "Press Enter here once the VM window shows the root prompt..."
+  type_text "$SETUP_CMD"
+  info "\nStarted archinstall. The VM powers off when it's done. Waiting..."
+
+  while is_running; do sleep 2; done
+
+  info "Installer VM exited."
+  rm -rf "$SHARE"
+  cmd_snapshot
+}
+
+# Boots the installed system, checks SSH, powers off and saves the base snapshot.
+cmd_snapshot() {
+  is_running && die "VM is running. Run: test/vm down"
+  qemu-img snapshot -l "$DISK" | grep -qw "$SNAPSHOT" && die "Snapshot '$SNAPSHOT' already exists."
+
+  info "Booting the installed system to check it..."
+  start_qemu
+  wait_for_ssh
+  monitor_cmd system_powerdown
+  wait_for_exit
+
+  qemu-img snapshot -c "$SNAPSHOT" "$DISK"
+  cp "$VARS" "$VARS_FRESH"
+  info "Base image ready. Snapshot '$SNAPSHOT' saved."
+}
+
+cmd_reset() {
+  is_running && die "VM is running. Run: test/vm down"
+  [[ -f $VARS_FRESH ]] || die "No '$SNAPSHOT' snapshot. Run: test/vm create"
+  qemu-img snapshot -a "$SNAPSHOT" "$DISK"
+  cp "$VARS_FRESH" "$VARS"
+  info "Restored snapshot '$SNAPSHOT'."
+}
+
+cmd_up() {
+  start_qemu
+  wait_for_ssh
+  info "VM is up. SSH: test/vm ssh"
+}
+
+cmd_down() {
+  is_running || {
+    info "VM is not running."
+    return 0
+  }
+  monitor_cmd system_powerdown
+  wait_for_exit
+  info "VM powered off."
+}
+
+cmd_ssh() {
+  is_running || die "VM is not running. Run: test/vm up"
+  ssh_vm -t "$@"
+}
+
+# Copies the local working tree (tracked + untracked, minus ignored) and runs install.sh.
+cmd_install() {
+  is_running || die "VM is not running. Run: test/vm up"
+
+  info "Copying working tree to ~/.local/share/archype..."
+  (
+    cd "$REPO_DIR"
+    git ls-files -co --exclude-standard -z |
+      while IFS= read -r -d '' f; do [[ -e $f ]] && printf '%s\0' "$f"; done |
+      tar --null -T - -czf -
+  ) | ssh_vm 'rm -rf ~/.local/share/archype && mkdir -p ~/.local/share/archype && tar -xzf - -C ~/.local/share/archype'
+
+  ssh_vm -t 'bash ~/.local/share/archype/install.sh'
+}
+
+cmd_destroy() {
+  is_running && die "VM is running. Run: test/vm down"
+  rm -f "$DISK" "$VARS" "$VARS_FRESH" "$PIDFILE" "$MONITOR" "$LOG"
+  rm -rf "$SHARE"
+  info "Removed the VM disk. The ISO and SSH key are kept."
+}
+
+# Types text into the running VM; with no text, types the archinstall setup command.
+cmd_type() {
+  is_running || die "VM is not running."
+  type_text "${1:-$SETUP_CMD}"
+}
+
+cmd_status() {
+  echo "VM dir:   $VM_DIR"
+  echo "ISO:      $(cat "$ISO.version" 2>/dev/null || echo "not downloaded")"
+  echo "Disk:     $([[ -f $DISK ]] && echo present || echo none)"
+  echo "Snapshot: $([[ -f $DISK ]] && qemu-img snapshot -U -l "$DISK" | grep -qw "$SNAPSHOT" && echo "$SNAPSHOT" || echo none)"
+  echo "Running:  $(is_running && echo "yes (ssh port $SSH_PORT)" || echo no)"
+}
+
+usage() {
+  cat <<USAGE
+Usage: test/vm <command>
+
+  iso       Download and verify the latest Arch ISO (skipped if already there)
+  create    Install the base image with archinstall and save snapshot '$SNAPSHOT'
+  snapshot  Check the installed base boots, then save snapshot '$SNAPSHOT'
+  reset     Restore snapshot '$SNAPSHOT' (VM must be off)
+  up        Boot the VM and wait for SSH
+  install   Copy the local working tree into the VM and run install.sh
+  ssh       Open a shell in the VM
+  type      Type text into the VM window (default: the archinstall setup command)
+  down      Power off the VM
+  destroy   Delete the VM disk (keeps ISO and SSH key)
+  status    Show VM state
+USAGE
+}
+
+case "${1:-}" in
+iso | create | snapshot | reset | up | install | down | destroy | status) "cmd_$1" ;;
+ssh)
+  shift
+  cmd_ssh "$@"
+  ;;
+type) cmd_type "${2:-}" ;;
+*) usage ;;
+esac

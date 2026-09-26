@@ -1,0 +1,10 @@
+{
+  "!root-password": "archype",
+  "users": [
+    {
+      "username": "archype",
+      "!password": "archype",
+      "sudo": true
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+networkmanager                # network (wired, wifi, vpn); control with nmtui/nmcli
+pipewire                      # audio server
+pipewire-alsa                 # route ALSA apps through pipewire
+pipewire-pulse                # PulseAudio compatibility
+wireplumber                   # pipewire session manager
+rtkit                         # realtime scheduling for pipewire (avoids audio crackling)
+bluez                         # bluetooth stack
+bluez-utils                   # bluetoothctl
+power-profiles-daemon         # power profiles (performance / balanced / power-saver)
+python-gobject                # needed by powerprofilesctl
+brightnessctl                 # screen and keyboard brightness
+libnotify                     # notify-send, for the low battery warning

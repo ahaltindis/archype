@@ -13,7 +13,7 @@ export PATH="$USER_BIN_DIR:$PATH"
 
 source ${ARCHYPE_PATH}/lib/print.sh
 
-UNITS=("preflight" "cmd" "hyprland" "boot" "cmd-essentials")
+UNITS=("preflight" "system" "cmd" "hyprland" "boot" "cmd-essentials")
 
 catch_errors() {
   local code=$?

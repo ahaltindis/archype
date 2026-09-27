@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Warns once when the battery drops to the threshold while discharging.
+# The warning re-arms when the battery is charging again.
+
+THRESHOLD=10
+STATE_FILE="$HOME/.local/state/archype/battery-warned"
+
+battery=$(find /sys/class/power_supply -maxdepth 1 -name 'BAT*' | head -1)
+[[ -n $battery ]] || exit 0
+
+capacity=$(cat "$battery/capacity")
+status=$(cat "$battery/status")
+
+if [[ $status != "Discharging" ]]; then
+  rm -f "$STATE_FILE"
+  exit 0
+fi
+
+if ((capacity <= THRESHOLD)) && [[ ! -f $STATE_FILE ]]; then
+  notify-send -u critical -i battery-caution "Battery low" "Battery is at ${capacity}%. Plug in the charger."
+  mkdir -p "$(dirname "$STATE_FILE")"
+  touch "$STATE_FILE"
+fi

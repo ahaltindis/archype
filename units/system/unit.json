@@ -1,0 +1,5 @@
+{
+  "name": "System",
+  "description": "Network, audio, bluetooth and power services.",
+  "version": "1.0.0"
+}

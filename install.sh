@@ -16,9 +16,10 @@ source ${ARCHYPE_PATH}/lib/print.sh
 UNITS=("preflight" "cmd" "hyprland" "boot" "cmd-essentials")
 
 catch_errors() {
+  local code=$?
   rm -rf ${TMP_DIR}
   print_error "\nArchype installation failed!"
-  print_error "\nThis command halted with exit code $?:"
+  print_error "\nThis command halted with exit code $code:"
   print_error "$BASH_COMMAND"
   print_active "\nYou can retry by running: bash $ARCHYPE_PATH/install.sh"
 }

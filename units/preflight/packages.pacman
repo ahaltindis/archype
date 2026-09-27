@@ -1,1 +1,2 @@
 base-devel
+git          # needed to clone yay

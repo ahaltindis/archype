@@ -3,18 +3,21 @@
 # Set nice plain spinner with Arch Linux logo
 sudo plymouth-set-default-theme spinner
 
-# Find config location
-if [[ -f /boot/EFI/arch-limine/limine.conf ]]; then
-  limine_config="/boot/EFI/arch-limine/limine.conf"
-elif [[ -f /boot/EFI/BOOT/limine.conf ]]; then
-  limine_config="/boot/EFI/BOOT/limine.conf"
-elif [[ -f /boot/EFI/limine/limine.conf ]]; then
-  limine_config="/boot/EFI/limine/limine.conf"
-elif [[ -f /boot/limine/limine.conf ]]; then
-  limine_config="/boot/limine/limine.conf"
-elif [[ -f /boot/limine.conf ]]; then
-  limine_config="/boot/limine.conf"
-else
+# Find config location (/boot is root-only when it's the ESP, so check with sudo)
+limine_config=""
+for candidate in \
+  /boot/EFI/arch-limine/limine.conf \
+  /boot/EFI/BOOT/limine.conf \
+  /boot/EFI/limine/limine.conf \
+  /boot/limine/limine.conf \
+  /boot/limine.conf; do
+  if sudo test -f "$candidate"; then
+    limine_config="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$limine_config" ]]; then
   echo "Error: /boot limine config not found" >&2
   exit 1
 fi
@@ -42,6 +45,9 @@ if ! grep -Eq '^HOOKS=.*plymouth' /etc/mkinitcpio.conf; then
     exit 1
   fi
 fi
+
+# Autologin config is copied as a template; fill in the actual user
+sudo sed -i "s/^User=.*/User=$USER/" /etc/sddm.conf.d/autologin.conf
 
 # Enable sddm login service
 sudo systemctl enable sddm.service

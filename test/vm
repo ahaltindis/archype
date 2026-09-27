@@ -277,7 +277,8 @@ cmd_install() {
       tar --null -T - -czf -
   ) | ssh_vm 'rm -rf ~/.local/share/archype && mkdir -p ~/.local/share/archype && tar -xzf - -C ~/.local/share/archype'
 
-  ssh_vm -t 'bash ~/.local/share/archype/install.sh'
+  ssh_vm -t 'bash ~/.local/share/archype/install.sh' 2>&1 | tee "$VM_DIR/install.log"
+  info "Log saved to $VM_DIR/install.log"
 }
 
 cmd_destroy() {

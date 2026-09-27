@@ -49,8 +49,8 @@ check_already_installed() {
     print_inactive "=> $unit [already installed]"
   done
   if [[ -z "$starting_unit" ]]; then
-    print_active "\nNothing left to install"
-    return 0
+    to_install=("${UNITS[@]}")
+    print_active "\nAll units are installed. They will be applied again; your config edits are kept."
   elif [[ "$starting_unit" == "${UNITS[0]}" ]]; then
     print_active "\nUnit installation will start with '$starting_unit' unit."
   else
@@ -89,7 +89,7 @@ install_prerequisites() {
   for pkg in "${packages[@]}"; do
     if ! command -v $pkg &>/dev/null; then
       print_title "  -> Installing prerequisite package '$pkg'"
-      sudo pacman -S --noconfirm --needed "$pkg"
+      sudo pacman -Syu --noconfirm --needed "$pkg"
     fi
   done
 }

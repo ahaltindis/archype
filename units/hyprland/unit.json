@@ -19,6 +19,5 @@
     ["input.conf", ".config/hypr/input.conf"],
     ["monitors.conf", ".config/hypr/monitors.conf"],
     ["unit.conf", ".config/hypr/unit.conf"]
-  ],
-  "dependencies": []
+  ]
 }

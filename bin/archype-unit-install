@@ -58,14 +58,63 @@ install_packages() {
     if [ ${#packages[@]} -gt 0 ]; then
       print_title "  -> Installing ${#packages[@]} packages: ${packages[*]}"
       if [ "$PKG_MANAGER" == "pacman" ]; then
-        sudo pacman -Sy
-        sudo pacman -S --noconfirm --needed "${packages[@]}"
+        # Sync and upgrade together with the install; never a partial upgrade
+        sudo pacman -Syu --noconfirm --needed "${packages[@]}"
       elif [ "$PKG_MANAGER" == "aur" ]; then
-        yay -S --noconfirm "${packages[@]}"
+        yay -S --noconfirm --needed "${packages[@]}"
       fi
     else
       print_title "  -> No packages to install"
     fi
+  fi
+}
+
+# Copies a unit config file to the user's home without losing their edits.
+# The pristine copy is the Archype version from the last install:
+#   no user file              -> copy
+#   user file == new version  -> nothing to do
+#   's' flag                  -> keep the user file (seeded once)
+#   no pristine copy yet      -> first install over an existing file: back it up, copy
+#   new version == pristine   -> Archype didn't change it: keep the user file
+#   user file == pristine     -> user didn't edit it: copy
+#   both changed              -> keep the user file, write <file>.new and show the diff
+sync_user_config() {
+  local src="$1" dst="$2" flg="$3"
+  local src_abs="$UNIT_PATH/config/$src"
+  local dst_abs="$HOME/$dst"
+  local pristine_abs="$UNIT_PRISTINE_CONFIG/$src"
+  local pristine_abs_new="$UNIT_PRISTINE_CONFIG_NEW/$src"
+
+  if [[ ! -f "$src_abs" ]]; then
+    print_error "Config file cannot be found in the Archype source: $src_abs"
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$dst_abs")" "$(dirname "$pristine_abs_new")"
+  cp -f "$src_abs" "$pristine_abs_new"
+
+  if [[ ! -f "$dst_abs" ]]; then
+    print_title "  -> [new] $dst_abs"
+    cp -f "$src_abs" "$dst_abs"
+  elif cmp -s "$src_abs" "$dst_abs"; then
+    print_inactive "  -> [up to date] $dst_abs"
+  elif [[ "$flg" == *"s"* ]]; then
+    print_inactive "  -> [kept, seeded once] $dst_abs"
+  elif [[ ! -f "$pristine_abs" ]]; then
+    local backup="$dst_abs.bak.$(date +%s)"
+    cp -f "$dst_abs" "$backup"
+    cp -f "$src_abs" "$dst_abs"
+    print_active "  -> [replaced] $dst_abs (your previous file: $backup)"
+  elif cmp -s "$src_abs" "$pristine_abs"; then
+    print_inactive "  -> [kept your edits] $dst_abs"
+  elif cmp -s "$dst_abs" "$pristine_abs"; then
+    print_title "  -> [updated] $dst_abs"
+    cp -f "$src_abs" "$dst_abs"
+  else
+    cp -f "$src_abs" "$dst_abs.new"
+    print_active "  -> [conflict] $dst_abs: you and Archype both changed it."
+    print_active "     Kept yours. New version: $dst_abs.new. Changes in the new version:"
+    diff "$pristine_abs" "$src_abs" || true
   fi
 }
 
@@ -109,92 +158,25 @@ install_unit() {
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then
     print_title "-> Checking user configs"
+    rm -rf "$UNIT_PRISTINE_CONFIG_NEW"
     mkdir -p "$UNIT_PRISTINE_CONFIG_NEW"
-    jq -c '.config[]?' "$UNIT_PATH/unit.json" | while read -r pair; do
-      src=$(echo "$pair" | jq -r '.[0]')
-      dst=$(echo "$pair" | jq -r '.[1]')
-      flg=$(echo "$pair" | jq -r '.[2]')
-      if [[ "$flg" == "null" ]]; then
-        flg=""
-      fi
+    local src dst flg
+    while IFS=$'\t' read -r src dst flg; do
+      sync_user_config "$src" "$dst" "$flg"
+    done < <(jq -r '.config[]? | [.[0], .[1], (.[2] // "")] | @tsv' "$UNIT_PATH/unit.json")
+    rm -rf "$UNIT_PRISTINE_CONFIG"
+    mv "$UNIT_PRISTINE_CONFIG_NEW" "$UNIT_PRISTINE_CONFIG"
 
-      skip_existing=""
-      if [[ "$flg" == *"s"* ]]; then
-        skip_existing=1
-      fi
-
-      src_abs="$UNIT_PATH/config/$src"
-      dst_abs="$HOME/$dst"
-      pristine_abs="$UNIT_PRISTINE_CONFIG/$src"
-      pristine_abs_new="$UNIT_PRISTINE_CONFIG_NEW/$src"
-
-      # --Logic--
-      # !src
-      #   fail
-      # src exists
-      #   !dst
-      #     override dst
-      #     override pristine
-      #   dst exists
-      #     skip flag
-      #       skip
-      #     pristine exists
-      #       pristine == dst
-      #         override dst
-      #         override pristine
-      #     !pristine or pristine != dst
-      #       copy with backup
-      #       override pristine
-
-      if [[ ! -f "$src_abs" ]]; then
-        print_error "Config file cannot be found in the Archype source!"
-        return 1
-      fi
-
-      mkdir -p $(dirname ${dst_abs})
-      mkdir -p $(dirname ${pristine_abs_new})
-      cp -f "$src_abs" "$pristine_abs_new"
-
-      if [[ ! -f "$dst_abs" ]]; then
-        print_title "  -> [override (DST not exists)] $src_abs -> $dst_abs"
-        cp -f "$src_abs" "$dst_abs"
-        continue
-      fi
-
-      if [[ "$skip_existing" ]]; then
-        print_title "  -> [skip] $src_abs -> $dst_abs"
-        continue
-      fi
-
-      if cmp -s "$pristine_abs" "$dst_abs"; then
-        print_title "  -> [override (no change)] $src_abs -> $dst_abs"
-        cp -f "$src_abs" "$dst_abs"
-        continue
-      fi
-
-      print_title "  -> [$flg] $src_abs -> $dst_abs"
-      archype-config-update "$src_abs" "$dst_abs"
-    done
-    rm -rf ${UNIT_PRISTINE_CONFIG}
-    mv ${UNIT_PRISTINE_CONFIG_NEW} ${UNIT_PRISTINE_CONFIG}
-  fi
-
-  if [[ -f "$UNIT_PATH/unit.json" ]]; then
     print_title "-> Checking system configs"
-    jq -c '.system[]?' "$UNIT_PATH/unit.json" | while read -r pair; do
-      src=$(echo "$pair" | jq -r '.[0]')
-      dst=$(echo "$pair" | jq -r '.[1]')
-
-      src_abs="$UNIT_PATH/system/$src"
-      dst_abs="$dst"
-      if [[ ! -f "$src_abs" ]]; then
-        print_error "Config file cannot be found in the Archype source!"
-        return 1
+    while IFS=$'\t' read -r src dst; do
+      if [[ ! -f "$UNIT_PATH/system/$src" ]]; then
+        print_error "Config file cannot be found in the Archype source: $UNIT_PATH/system/$src"
+        exit 1
       fi
-      print_title "  -> $src_abs -> $dst_abs"
+      print_title "  -> $UNIT_PATH/system/$src -> $dst"
       # trick for sudo to find binary file with full path
-      sudo $(which archype-config-update) "$src_abs" "$dst_abs"
-    done
+      sudo "$(which archype-config-update)" "$UNIT_PATH/system/$src" "$dst"
+    done < <(jq -r '.system[]? | [.[0], .[1]] | @tsv' "$UNIT_PATH/unit.json")
   fi
 
   if [[ -f "$UNIT_PATH/hypr.conf" ]]; then
@@ -214,7 +196,9 @@ install_unit() {
   # Run unit scripts
   if [[ -f "$UNIT_PATH/run.sh" ]]; then
     print_title "-> Executing $UNIT_PATH/run.sh"
-    source $UNIT_PATH/run.sh
+    # Separate process: run.sh gets print helpers and UNIT_PATH, not our variables
+    UNIT_PATH="$UNIT_PATH" ARCHYPE_PATH="$ARCHYPE_PATH" \
+      bash -eEo pipefail -c 'source "$1"; source "$2"' _ "$LIB_DIR/print.sh" "$UNIT_PATH/run.sh"
   fi
 
   print_success "\n$UNIT installed successfully."

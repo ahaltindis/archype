@@ -5,10 +5,12 @@ gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark"
 gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
 # gsettings set org.gnome.desktop.interface icon-theme "Yaru-blue"
 
+# Set initial theme and background; keep the user's choice on re-runs
 mkdir -p ~/.config/archype/current
-ln -snf ~/.config/archype/themes/tokyo-night ~/.config/archype/current/theme
-ln -snf $(find ~/.config/archype/current/theme/backgrounds/ -maxdepth 1 -type f | head -1) ~/.config/archype/current/background
-ln -snf ~/.config/archype/hyprland/default-screensaver.txt ~/.config/archype/current/screensaver
+[[ -e ~/.config/archype/current/theme ]] ||
+  ln -snf ~/.config/archype/themes/tokyo-night ~/.config/archype/current/theme
+[[ -e ~/.config/archype/current/background ]] ||
+  ln -snf "$(find ~/.config/archype/current/theme/backgrounds/ -maxdepth 1 -type f | sort | head -1)" ~/.config/archype/current/background
 
 # Copy over the keyboard layout that's been set in Arch during install to Hyprland
 #FIXME: this needs to handle input.conf override safely.

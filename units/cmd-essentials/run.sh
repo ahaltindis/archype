@@ -18,5 +18,3 @@ if [[ -z "$(git config user.email)" ]]; then
     git config --global user.email "$USER_EMAIL"
   fi
 fi
-
-gum spin --spinner "globe" --title "Done! Press any key to close..." -- bash -c 'read -n 1 -s'

@@ -35,8 +35,8 @@
   },
   "custom/logo": {
     "format": "<span>\uf303</span>",
-    "on-click": "archype-menu",
-    "tooltip-format": "Menu\n\nSuper + Alt + Space"
+    "on-click": "vicinae toggle",
+    "tooltip-format": "Launcher\n\nSuper + Space"
   },
 
   "cpu": {
@@ -77,7 +77,7 @@
     "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%",
     "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%",
     "interval": 5,
-    "on-click": "archype-menu system",
+    "on-click": "vicinae 'vicinae://open?popToRoot=true&fallbackText=power'",
     "states": {
       "warning": 20,
       "critical": 10

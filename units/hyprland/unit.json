@@ -9,6 +9,7 @@
     ["swayosd/style.css", ".config/swayosd/style.css"],
     ["waybar/config.jsonc", ".config/waybar/config.jsonc"],
     ["waybar/style.css", ".config/waybar/style.css"],
+    ["vicinae/settings.json", ".config/vicinae/settings.json"],
     ["autostart.conf", ".config/hypr/autostart.conf"],
     ["bindings.conf", ".config/hypr/bindings.conf"],
     ["envs.conf", ".config/hypr/envs.conf"],

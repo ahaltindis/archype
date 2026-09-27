@@ -1,0 +1,51 @@
+{
+  "$schema": "https://vicinae.com/schemas/config.json",
+  "telemetry": {
+    "system_info": false
+  },
+  "tray": {
+    "enabled": false
+  },
+  "theme": {
+    "light": {
+      "name": "archype"
+    },
+    "dark": {
+      "name": "archype"
+    }
+  },
+  "favorites": [],
+  "fallbacks": [],
+  "providers": {
+    "browser-extension": { "enabled": false },
+    "developer": { "enabled": false },
+    "files": { "enabled": false },
+    "font": { "enabled": false },
+    "manage-shortcuts": { "enabled": false },
+    "media": { "enabled": false },
+    "raycast-compat": { "enabled": false },
+    "screenshots": { "enabled": false },
+    "snippets": { "enabled": false },
+    "system": { "enabled": false },
+    "theme": { "enabled": false },
+    "wm": { "enabled": false },
+    "core": {
+      "entrypoints": {
+        "list-extensions": { "enabled": false },
+        "report-bug": { "enabled": false },
+        "search-menu-bar": { "enabled": false },
+        "search-tray": { "enabled": false },
+        "store": { "enabled": false },
+        "join-discord-server": { "enabled": false },
+        "sponsor": { "enabled": false },
+        "show-logs": { "enabled": false },
+        "open-default-config": { "enabled": false },
+        "reload-scripts": { "enabled": false },
+        "forget-telemetry": { "enabled": false },
+        "oauth-token-store": { "enabled": false },
+        "search-builtin-icons": { "enabled": false },
+        "inspect-local-storage": { "enabled": false }
+      }
+    }
+  }
+}

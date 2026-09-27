@@ -12,6 +12,12 @@ mkdir -p ~/.config/archype/current
 [[ -e ~/.config/archype/current/background ]] ||
   ln -snf "$(find ~/.config/archype/current/theme/backgrounds/ -maxdepth 1 -type f | sort | head -1)" ~/.config/archype/current/background
 
+# Vicinae: use the current Archype theme, skip its first-start screen
+mkdir -p ~/.local/share/vicinae/themes ~/.local/state/vicinae
+ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/themes/archype.toml
+[[ -f ~/.local/state/vicinae/onboarding.json ]] ||
+  echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
+
 # Copy over the keyboard layout that's been set in Arch during install to Hyprland
 #FIXME: this needs to handle input.conf override safely.
 

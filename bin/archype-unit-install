@@ -78,6 +78,12 @@ install_packages() {
 #   new version == pristine   -> Archype didn't change it: keep the user file
 #   user file == pristine     -> user didn't edit it: copy
 #   both changed              -> keep the user file, write <file>.new and show the diff
+# Writes a file in one rename, so apps watching it (Hyprland, waybar) never read it half-written.
+replace_file() {
+  cp -f "$1" "$2.archype-new"
+  mv -f "$2.archype-new" "$2"
+}
+
 sync_user_config() {
   local src="$1" dst="$2" flg="$3"
   local src_abs="$UNIT_PATH/config/$src"
@@ -95,7 +101,7 @@ sync_user_config() {
 
   if [[ ! -f "$dst_abs" ]]; then
     print_title "  -> [new] $dst_abs"
-    cp -f "$src_abs" "$dst_abs"
+    replace_file "$src_abs" "$dst_abs"
   elif cmp -s "$src_abs" "$dst_abs"; then
     print_inactive "  -> [up to date] $dst_abs"
   elif [[ "$flg" == *"s"* ]]; then
@@ -103,13 +109,13 @@ sync_user_config() {
   elif [[ ! -f "$pristine_abs" ]]; then
     local backup="$dst_abs.bak.$(date +%s)"
     cp -f "$dst_abs" "$backup"
-    cp -f "$src_abs" "$dst_abs"
+    replace_file "$src_abs" "$dst_abs"
     print_active "  -> [replaced] $dst_abs (your previous file: $backup)"
   elif cmp -s "$src_abs" "$pristine_abs"; then
     print_inactive "  -> [kept your edits] $dst_abs"
   elif cmp -s "$dst_abs" "$pristine_abs"; then
     print_title "  -> [updated] $dst_abs"
-    cp -f "$src_abs" "$dst_abs"
+    replace_file "$src_abs" "$dst_abs"
   else
     cp -f "$src_abs" "$dst_abs.new"
     print_active "  -> [conflict] $dst_abs: you and Archype both changed it."
@@ -148,12 +154,14 @@ install_unit() {
   # Link config directory
   if [[ -d "$UNIT_PATH/default" ]]; then
     print_title "-> Linking config directory"
-    if [ -L "$UNIT_DEFAULT_CONFIG" ]; then
-      print_title "  -> Found $UNIT_DEFAULT_CONFIG, removing it!"
-      rm -r "$UNIT_DEFAULT_CONFIG"
+    if [[ "$(readlink "$UNIT_DEFAULT_CONFIG")" == "$UNIT_PATH/default" ]]; then
+      print_inactive "  -> [up to date] $UNIT_DEFAULT_CONFIG"
+    else
+      # Swap the link in one rename: running apps (Hyprland reloads on change) never see it missing
+      print_title "  -> $UNIT_PATH/default -> $UNIT_DEFAULT_CONFIG"
+      ln -sn "$UNIT_PATH/default" "$UNIT_DEFAULT_CONFIG.archype-new"
+      mv -T "$UNIT_DEFAULT_CONFIG.archype-new" "$UNIT_DEFAULT_CONFIG"
     fi
-    print_title "  -> $UNIT_PATH/default -> $UNIT_DEFAULT_CONFIG"
-    ln -sn "$UNIT_PATH/default" "$UNIT_DEFAULT_CONFIG"
   fi
 
   if [[ -f "$UNIT_PATH/unit.json" ]]; then

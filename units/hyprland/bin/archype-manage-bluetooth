@@ -1,8 +1,0 @@
-#!/bin/bash
-
-if command -v blueberry &>/dev/null; then
-  blueberry
-  exit 0
-fi
-
-notify-send "Bluetooth management software not found"

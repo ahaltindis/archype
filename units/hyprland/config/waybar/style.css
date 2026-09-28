@@ -37,7 +37,6 @@
 }
 
 #tray,
-#cpu,
 #battery,
 #network,
 #bluetooth,
@@ -46,10 +45,6 @@
 #custom-update {
   min-width: 12px;
   margin: 0 7.5px;
-}
-
-#custom-expand-icon {
-  margin-right: 7px;
 }
 
 tooltip {

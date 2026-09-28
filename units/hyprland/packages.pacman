@@ -13,6 +13,8 @@ waybar                        # statusbar
 mako                          # notification daemon
 swaybg                        # wallpaper tool
 swayosd                       # osd for volume etc
+wiremix                       # audio TUI (waybar audio click)
+bluetui                       # bluetooth TUI (waybar bluetooth click)
 playerctl                     # to make multimedia play/pause/etc keys functional.
 libqalculate                  # calculator backend for vicinae
 xdg-desktop-portal-hyprland   # communication through D-Bus (screenshare, file picker)

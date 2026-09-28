@@ -7,11 +7,10 @@
   "modules-left": ["custom/logo", "hyprland/workspaces"],
   "modules-center": ["clock"],
   "modules-right": [
-    "group/tray-expander",
+    "tray",
     "bluetooth",
     "network",
     "pulseaudio",
-    "cpu",
     "battery"
   ],
   "hyprland/workspaces": {
@@ -39,17 +38,10 @@
     "tooltip-format": "Launcher\n\nSuper + Space"
   },
 
-  "cpu": {
-    "interval": 5,
-    "format": "󰍛",
-    "on-click": "archype-manage-process"
-  },
   "clock": {
     "format": "{:%A %H:%M}",
     "format-alt": "{:%d %B W%V %Y}",
-    "tooltip": false,
-    "on-click": "archype-manage-time",
-    "on-click-right": "archype-manage-tzupdate"
+    "tooltip": false
   },
   "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
@@ -62,7 +54,7 @@
     "tooltip-format-disconnected": "Disconnected",
     "interval": 3,
     "spacing": 1,
-    "on-click": "archype-manage-network"
+    "on-click": "archype-launch-tui nmtui nmtui"
   },
   "battery": {
     "format": "{capacity}% {icon}",
@@ -77,7 +69,7 @@
     "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%",
     "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%",
     "interval": 5,
-    "on-click": "vicinae 'vicinae://open?popToRoot=true&fallbackText=power'",
+    "on-click": "archype-powerprofile-next",
     "states": {
       "warning": 20,
       "critical": 10
@@ -86,32 +78,21 @@
   "bluetooth": {
     "format": "",
     "format-disabled": "󰂲",
+    "format-no-controller": "",
     "format-connected": "",
     "tooltip-format": "Devices connected: {num_connections}",
-    "on-click": "archype-manage-bluetooth"
+    "on-click": "archype-launch-tui bluetui bluetui"
   },
   "pulseaudio": {
     "format": "{icon}",
-    "on-click": "archype-manage-audio",
-    "on-click-right": "archype-manage-audio action",
+    "on-click": "archype-launch-tui Wiremix wiremix",
+    "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "tooltip-format": "Playing at {volume}%",
     "scroll-step": 5,
     "format-muted": "󰝟",
     "format-icons": {
       "default": ["", "", ""]
     }
-  },
-  "group/tray-expander": {
-    "orientation": "inherit",
-    "drawer": {
-      "transition-duration": 600,
-      "children-class": "tray-group-item"
-    },
-    "modules": ["custom/expand-icon", "tray"]
-  },
-  "custom/expand-icon": {
-    "format": " ",
-    "tooltip": false
   },
   "tray": {
     "icon-size": 12,

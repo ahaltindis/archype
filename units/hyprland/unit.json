@@ -10,6 +10,7 @@
     ["waybar/config.jsonc", ".config/waybar/config.jsonc"],
     ["waybar/style.css", ".config/waybar/style.css"],
     ["vicinae/settings.json", ".config/vicinae/settings.json"],
+    ["uwsm/env", ".config/uwsm/env"],
     ["hyprland.lua", ".config/hypr/hyprland.lua"],
     ["monitors.lua", ".config/hypr/monitors.lua"],
     ["input.lua", ".config/hypr/input.lua"],

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Toggles a TUI in a terminal with its own window class, so window rules can float it:
+# closes the window if it's already open, opens it otherwise.
+# Usage: archype-launch-tui <window-class> <command> [args...]
+
+class="$1"
+shift
+
+pid=$(hyprctl clients -j | jq -r --arg class "$class" '.[] | select(.class == $class) | .pid' | head -1)
+if [[ -n $pid ]]; then
+  kill "$pid"
+  exit 0
+fi
+
+exec uwsm app -- alacritty --class "$class" -e "$@"

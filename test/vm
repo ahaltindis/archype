@@ -275,7 +275,7 @@ cmd_install() {
     git ls-files -co --exclude-standard -z |
       while IFS= read -r -d '' f; do [[ -e $f ]] && printf '%s\0' "$f"; done |
       tar --null -T - -czf -
-  ) | ssh_vm 'rm -rf ~/.local/share/archype && mkdir -p ~/.local/share/archype && tar -xzf - -C ~/.local/share/archype'
+  ) | ssh_vm 'rm -rf ~/.local/share/archype.new && mkdir -p ~/.local/share/archype.new && tar -xzf - -C ~/.local/share/archype.new && { [[ -d ~/.local/share/archype ]] && mv ~/.local/share/archype ~/.local/share/archype.old; mv ~/.local/share/archype.new ~/.local/share/archype; rm -rf ~/.local/share/archype.old; }'
 
   ssh_vm -t 'bash ~/.local/share/archype/install.sh' 2>&1 | tee "$VM_DIR/install.log"
   info "Log saved to $VM_DIR/install.log"

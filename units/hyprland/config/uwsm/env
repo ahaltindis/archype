@@ -1,0 +1,5 @@
+# Environment for the whole desktop session: Hyprland, keybindings, waybar and apps.
+# Read by uwsm before Hyprland starts; log out and back in after changing it.
+
+# Archype commands (archype-*) are linked here
+export PATH="$HOME/.local/bin:$PATH"

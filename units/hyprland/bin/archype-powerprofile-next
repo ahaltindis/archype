@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Switches to the next power profile (performance -> balanced -> power-saver -> ...)
+
+mapfile -t profiles < <(powerprofilesctl list | sed -n 's/^[* ] *\([a-z-]*\):$/\1/p')
+current=$(powerprofilesctl get)
+
+next="${profiles[0]}"
+for i in "${!profiles[@]}"; do
+  if [[ ${profiles[$i]} == "$current" ]]; then
+    next="${profiles[$(((i + 1) % ${#profiles[@]}))]}"
+  fi
+done
+
+powerprofilesctl set "$next"
+notify-send -u low "Power profile: $next"

@@ -18,9 +18,6 @@ libqalculate                  # calculator backend for vicinae
 xdg-desktop-portal-hyprland   # communication through D-Bus (screenshare, file picker)
 xdg-desktop-portal-gtk        # for file picker alonside above
 xdg-user-dirs                 # Provides set of default user directories
-fcitx5                        # Input text/method framework
-fcitx5-gtk
-fcitx5-qt
 wl-clip-persist               # keep clipboard after programs close
 wl-clipboard                  # copy/paste tools for wayland
 uwsm                          # Wayland session manager

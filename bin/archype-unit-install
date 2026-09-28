@@ -179,11 +179,6 @@ install_unit() {
     done < <(jq -r '.system[]? | [.[0], .[1]] | @tsv' "$UNIT_PATH/unit.json")
   fi
 
-  if [[ -f "$UNIT_PATH/hypr.conf" ]]; then
-    print_title "-> Updating hypr.conf"
-    archype-unit-hypr-update "$UNIT" "$UNIT_PATH/hypr.conf"
-  fi
-
   # Install themes by linking each one of them
   if [[ -d "$UNIT_PATH/themes" ]]; then
     print_title "-> Linking themes"

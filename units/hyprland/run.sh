@@ -17,21 +17,3 @@ mkdir -p ~/.local/share/vicinae/themes ~/.local/state/vicinae
 ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/themes/archype.toml
 [[ -f ~/.local/state/vicinae/onboarding.json ]] ||
   echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
-
-# Copy over the keyboard layout that's been set in Arch during install to Hyprland
-#FIXME: this needs to handle input.conf override safely.
-
-# conf="/etc/vconsole.conf"
-# hyprconf="$HOME/.config/hypr/input.conf"
-#
-# layout=$(grep '^XKBLAYOUT=' "$conf" | cut -d= -f2 | tr -d '"')
-# variant=$(grep '^XKBVARIANT=' "$conf" | cut -d= -f2 | tr -d '"' || true)
-#
-# if [[ -n "$layout" ]]; then
-#   sed -i "/^[[:space:]]*kb_options *=/i\  kb_layout = $layout" "$hyprconf"
-# fi
-#
-# if [[ -n "$variant" ]]; then
-#   sed -i "/^[[:space:]]*kb_options *=/i\  kb_variant = $variant" "$hyprconf"
-# fi
-

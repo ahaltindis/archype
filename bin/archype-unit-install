@@ -19,6 +19,9 @@ ARCHYPE_THEMES="${ARCHYPE_CONFIG}/themes"
 PRISTINE_CONFIG="${ARCHYPE_CONFIG}/pristine"
 USER_BIN="$HOME/.local/bin"
 
+# Units and their run.sh call archype-* commands linked here
+export PATH="$USER_BIN:$PATH"
+
 mkdir -p ${INSTALL_STATE_DIR}
 mkdir -p ${ARCHYPE_CONFIG}
 mkdir -p ${ARCHYPE_THEMES}

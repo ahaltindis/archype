@@ -83,7 +83,7 @@ copy_unit_install_bin() {
 
 install_prerequisites() {
   local -a packages
-  packages=("gum" "jq")
+  packages=("jq")
 
   local pkg
   for pkg in "${packages[@]}"; do

@@ -39,6 +39,7 @@ mkdir -p ${LOGS_DIR}
 LOG_FILE=${LOGS_DIR}/install_$(date +%Y%m%d_%H%M%S).log
 
 echo -e "\nInstallation starting..."
-~/.local/share/archype/install.sh 2>&1 | tee -a $LOG_FILE
+# Read input from the terminal: with `curl ... | bash` stdin is the script itself
+~/.local/share/archype/install.sh </dev/tty 2>&1 | tee -a $LOG_FILE
 
 echo "Log saved to: $LOG_FILE"

@@ -11,6 +11,7 @@
     ["waybar/style.css", ".config/waybar/style.css"],
     ["vicinae/settings.json", ".config/vicinae/settings.json"],
     ["uwsm/env", ".config/uwsm/env"],
+    ["brave-flags.conf", ".config/brave-flags.conf"],
     ["hyprland.lua", ".config/hypr/hyprland.lua"],
     ["monitors.lua", ".config/hypr/monitors.lua"],
     ["input.lua", ".config/hypr/input.lua"],

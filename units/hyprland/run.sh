@@ -17,3 +17,8 @@ mkdir -p ~/.local/share/vicinae/themes ~/.local/state/vicinae
 ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/themes/archype.toml
 [[ -f ~/.local/state/vicinae/onboarding.json ]] ||
   echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
+
+# Brave as the default browser, unless one was already chosen
+if [[ -z "$(xdg-settings get default-web-browser 2>/dev/null)" ]]; then
+  xdg-settings set default-web-browser brave-browser.desktop
+fi

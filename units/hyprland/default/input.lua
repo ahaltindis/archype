@@ -22,7 +22,8 @@ hl.config({
     kb_layout = vconsole("XKBLAYOUT") or "us",
     kb_variant = vconsole("XKBVARIANT") or "",
     kb_options = "compose:caps",
-    follow_mouse = 1,
+    -- Click to focus; hovering doesn't change focus, but scrolling reaches the window under the cursor
+    follow_mouse = 2,
     -- -1.0 to 1.0, 0 means no change
     sensitivity = 0,
     natural_scroll = true,

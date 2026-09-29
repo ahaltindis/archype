@@ -1,0 +1,38 @@
+[meta]
+version = 1
+name = "Archype"
+description = "Black with Arch Linux blue"
+variant = "dark"
+inherits = "vicinae-dark"
+
+[colors.core]
+background = "#000000"
+foreground = "#d0d0d0"
+secondary_background = "#111111"
+border = "#2a2a2a"
+accent = "#1793d1"
+accent_foreground = "#000000"
+
+[colors.accents]
+blue = "#1793d1"
+green = "#8cc265"
+magenta = "#b57edc"
+orange = "#e8914a"
+purple = "#b57edc"
+red = "#e05561"
+yellow = "#d9a74a"
+cyan = "#42b3c2"
+
+[colors.text]
+muted = "#808080"
+placeholder = "#606060"
+
+[colors.input]
+border_focus = "#1793d1"
+
+[colors.list.item.selection]
+background = "#1a2a36"
+secondary_background = "#1a2a36"
+
+[colors.grid.item]
+background = "#111111"

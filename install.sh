@@ -29,10 +29,11 @@ trap catch_errors ERR
 # Ask for the sudo password once, then keep it fresh so a long install never stops to ask again
 start_sudo_keepalive() {
   sudo -v
+  # Output to /dev/null: its sleep would otherwise hold boot.sh's log pipe open after the install ends
   while kill -0 $$ 2>/dev/null; do
-    sudo -n -v 2>/dev/null
+    sudo -n -v
     sleep 60
-  done &
+  done >/dev/null 2>&1 &
   SUDO_KEEPALIVE_PID=$!
 }
 

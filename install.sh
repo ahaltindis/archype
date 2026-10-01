@@ -26,6 +26,23 @@ catch_errors() {
 
 trap catch_errors ERR
 
+# Ask for the sudo password once, then keep it fresh so a long install never stops to ask again
+start_sudo_keepalive() {
+  sudo -v
+  while kill -0 $$ 2>/dev/null; do
+    sudo -n -v 2>/dev/null
+    sleep 60
+  done &
+  SUDO_KEEPALIVE_PID=$!
+}
+
+stop_sudo_keepalive() {
+  [[ -n "$SUDO_KEEPALIVE_PID" ]] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null
+  return 0
+}
+
+trap stop_sudo_keepalive EXIT
+
 mkdir -p ${INSTALL_STATE_DIR}
 mkdir -p ${USER_BIN_DIR}
 mkdir -p ${TMP_DIR}
@@ -56,8 +73,6 @@ check_already_installed() {
   else
     print_active "\nUnit installation will continue with '$starting_unit' unit."
   fi
-  echo ""
-  read -p "Press [Enter] to continue or Ctrl+C to cancel..."
 }
 
 print_status() {
@@ -98,6 +113,8 @@ main() {
   clear
   print_logo
   print_title "Starting installation.."
+
+  start_sudo_keepalive
 
   copy_unit_install_bin
 

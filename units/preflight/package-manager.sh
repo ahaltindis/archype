@@ -13,7 +13,9 @@ if ! command -v yay &>/dev/null; then
   print_normal "Cloning aur/yay-bin from Github mirror."
   git clone --branch yay-bin --single-branch https://github.com/archlinux/aur.git
   cd aur
-  makepkg -si --noconfirm
+  # Build only: makepkg installs with `sudo -k`, which ignores the installer's cached sudo
+  makepkg -s --noconfirm
+  sudo pacman -U --noconfirm ./yay-bin-[0-9]*.pkg.tar.zst
   cd ${CUR_DIR}
   rm -rf ${TMP_DIR}
 fi

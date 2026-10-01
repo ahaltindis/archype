@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# The installer doesn't ask for a git identity. On the first desktop login,
+# remind once how to set it, if it isn't set yet.
+
+archype-state get reminded.git-identity &>/dev/null && exit 0
+
+if [[ -z "$(git config --global user.name)" || -z "$(git config --global user.email)" ]]; then
+  notify-send -t 0 "Set your git identity" \
+    "git config --global user.name \"Your Name\"\ngit config --global user.email you@example.com"
+fi
+
+archype-state set reminded.git-identity

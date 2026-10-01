@@ -56,20 +56,33 @@ check_already_installed() {
   local starting_unit
   local unit
   for unit in "${UNITS[@]}"; do
-    if [[ -z "$starting_unit" && ! -f "$INSTALL_STATE_DIR/$unit.done" ]]; then
+    if [[ ! -f "$INSTALL_STATE_DIR/$unit.done" ]]; then
       starting_unit=$unit
+      break
     fi
-    if [[ -n "$starting_unit" ]]; then
-      to_install+=("$unit")
-      rm -f "$INSTALL_STATE_DIR/$unit.done"
-      continue
-    fi
-    print_inactive "=> $unit [already installed]"
   done
+
+  # Everything installed: re-applying all units is how Archype updates
   if [[ -z "$starting_unit" ]]; then
     to_install=("${UNITS[@]}")
-    print_active "\nAll units are installed. They will be applied again; your config edits are kept."
-  elif [[ "$starting_unit" == "${UNITS[0]}" ]]; then
+    print_active "\nAll units are installed. Checking each one for updates; your config edits are kept."
+    return 0
+  fi
+
+  local resuming=""
+  for unit in "${UNITS[@]}"; do
+    if [[ "$unit" == "$starting_unit" ]]; then
+      resuming=1
+    fi
+    if [[ -n "$resuming" ]]; then
+      to_install+=("$unit")
+      rm -f "$INSTALL_STATE_DIR/$unit.done"
+    else
+      print_inactive "=> $unit [already installed]"
+    fi
+  done
+
+  if [[ "$starting_unit" == "${UNITS[0]}" ]]; then
     print_active "\nUnit installation will start with '$starting_unit' unit."
   else
     print_active "\nUnit installation will continue with '$starting_unit' unit."

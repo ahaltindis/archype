@@ -7,11 +7,17 @@ set -eEo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_DIR="$REPO_DIR/test"
-VM_DIR="${ARCHYPE_VM_DIR:-$HOME/.local/share/archype-vm}"
+# ARCHYPE_VM_CONFIG=<name> uses test/archinstall-<name>.json and its own VM folder
+VM_CONFIG="${ARCHYPE_VM_CONFIG:-}"
+ARCHINSTALL_CONFIG="$TEST_DIR/archinstall${VM_CONFIG:+-$VM_CONFIG}.json"
+VM_DIR="${ARCHYPE_VM_DIR:-$HOME/.local/share/archype-vm${VM_CONFIG:+-$VM_CONFIG}}"
+# Typed at boot for encrypted disks
+DISK_PASSWORD="${ARCHYPE_VM_DISK_PASSWORD:-}"
 ISO_MIRROR="${ARCHYPE_ISO_MIRROR:-https://geo.mirror.pkgbuild.com/iso/latest}"
 SSH_PORT="${ARCHYPE_VM_SSH_PORT:-2222}"
 
-ISO="$VM_DIR/archlinux-x86_64.iso"
+# The ISO is shared between all VM configs
+ISO="$HOME/.local/share/archype-vm/archlinux-x86_64.iso"
 DISK="$VM_DIR/disk.qcow2"
 DISK_SIZE="40G"
 VARS="$VM_DIR/vars.fd"
@@ -107,7 +113,13 @@ type_text() {
 
 wait_for_ssh() {
   info "Waiting for SSH on port $SSH_PORT..."
-  for _ in $(seq 1 90); do
+  local i
+  for i in $(seq 1 90); do
+    # Encrypted disk: type the password at the boot prompt (again later in case the first was too early)
+    if [[ -n $DISK_PASSWORD ]] && ((i == 12 || i == 30)); then
+      info "Typing the disk password..."
+      type_text "$DISK_PASSWORD"
+    fi
     if ssh_vm -o ConnectTimeout=2 true 2>/dev/null; then
       return 0
     fi
@@ -191,7 +203,7 @@ cmd_create() {
   pubkey=$(cat "$KEY.pub")
   jq --arg key "$pubkey" --arg user "$VM_USER" '.custom_commands = [
     "install -d -m 700 -o \($user) -g \($user) /home/\($user)/.ssh && echo \"\($key)\" > /home/\($user)/.ssh/authorized_keys && chown \($user):\($user) /home/\($user)/.ssh/authorized_keys && chmod 600 /home/\($user)/.ssh/authorized_keys"
-  ]' "$TEST_DIR/archinstall.json" >"$SHARE/archinstall.json"
+  ]' "$ARCHINSTALL_CONFIG" >"$SHARE/archinstall.json"
   cp "$TEST_DIR/archinstall-creds.json" "$SHARE/creds.json"
   cat >"$SHARE/setup.sh" <<'SH'
 #!/bin/bash

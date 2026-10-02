@@ -1,0 +1,140 @@
+{
+  "archinstall-language": "English",
+  "app_config": {
+    "audio_config": {
+      "audio": "pipewire"
+    }
+  },
+  "bootloader_config": {
+    "bootloader": "Limine",
+    "uki": false,
+    "removable": true
+  },
+  "disk_config": {
+    "config_type": "default_layout",
+    "device_modifications": [
+      {
+        "device": "/dev/vda",
+        "wipe": true,
+        "partitions": [
+          {
+            "obj_id": "boot",
+            "status": "create",
+            "type": "primary",
+            "dev_path": null,
+            "fs_type": "fat32",
+            "mountpoint": "/boot",
+            "mount_options": [],
+            "flags": [
+              "boot",
+              "esp"
+            ],
+            "btrfs": [],
+            "start": {
+              "value": 1,
+              "unit": "MiB",
+              "sector_size": {
+                "value": 512,
+                "unit": "B"
+              }
+            },
+            "size": {
+              "value": 1024,
+              "unit": "MiB",
+              "sector_size": {
+                "value": 512,
+                "unit": "B"
+              }
+            }
+          },
+          {
+            "obj_id": "root",
+            "status": "create",
+            "type": "primary",
+            "dev_path": null,
+            "fs_type": "btrfs",
+            "mountpoint": null,
+            "mount_options": [
+              "compress=zstd"
+            ],
+            "flags": [],
+            "btrfs": [
+              {
+                "name": "@",
+                "mountpoint": "/"
+              },
+              {
+                "name": "@home",
+                "mountpoint": "/home"
+              },
+              {
+                "name": "@log",
+                "mountpoint": "/var/log"
+              },
+              {
+                "name": "@pkg",
+                "mountpoint": "/var/cache/pacman/pkg"
+              }
+            ],
+            "start": {
+              "value": 1025,
+              "unit": "MiB",
+              "sector_size": {
+                "value": 512,
+                "unit": "B"
+              }
+            },
+            "size": {
+              "value": 39934,
+              "unit": "MiB",
+              "sector_size": {
+                "value": 512,
+                "unit": "B"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "disk_encryption": {
+      "encryption_type": "luks",
+      "partitions": [
+        "root"
+      ]
+    }
+  },
+  "hostname": "archype-vm-luks",
+  "kernels": [
+    "linux"
+  ],
+  "locale_config": {
+    "kb_layout": "us",
+    "sys_enc": "UTF-8",
+    "sys_lang": "en_US"
+  },
+  "network_config": {
+    "type": "nm"
+  },
+  "ntp": true,
+  "packages": [
+    "openssh"
+  ],
+  "services": [
+    "sshd"
+  ],
+  "pacman_config": {
+    "color": true,
+    "parallel_downloads": 5
+  },
+  "profile_config": {
+    "profile": {
+      "main": "Minimal"
+    }
+  },
+  "swap": {
+    "enabled": true,
+    "algorithm": "zstd"
+  },
+  "timezone": "UTC",
+  "encryption_password": "archype"
+}

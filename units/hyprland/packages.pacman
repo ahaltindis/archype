@@ -25,5 +25,7 @@ wl-clip-persist               # keep clipboard after programs close
 wl-clipboard                  # copy/paste tools for wayland
 uwsm                          # Wayland session manager
 ttf-cascadia-mono-nerd        # default font used in everywhere
+noto-fonts                    # default font for apps and web pages
+noto-fonts-emoji              # emoji
 kvantum-qt5                   # Use dark mode for QT apps too (like kdenlive)
 gnome-themes-extra            # Prefer dark everything, adds Adwaita-dark theme

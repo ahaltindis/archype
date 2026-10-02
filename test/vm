@@ -277,8 +277,9 @@ cmd_ssh() {
   ssh_vm -t "$@"
 }
 
-# Copies the local working tree (tracked + untracked, minus ignored) and runs install.sh.
-cmd_install() {
+# Copies the local working tree (tracked + untracked, minus ignored) to ~/.local/share/archype.
+# Unpacks next to it and swaps it in, so a running Hyprland never sees the config missing.
+sync_tree() {
   is_running || die "VM is not running. Run: test/vm up"
 
   info "Copying working tree to ~/.local/share/archype..."
@@ -288,12 +289,39 @@ cmd_install() {
       while IFS= read -r -d '' f; do [[ -e $f ]] && printf '%s\0' "$f"; done |
       tar --null -T - -czf -
   ) | ssh_vm 'rm -rf ~/.local/share/archype.new && mkdir -p ~/.local/share/archype.new && tar -xzf - -C ~/.local/share/archype.new && { [[ -d ~/.local/share/archype ]] && mv ~/.local/share/archype ~/.local/share/archype.old; mv ~/.local/share/archype.new ~/.local/share/archype; rm -rf ~/.local/share/archype.old; }'
+}
+
+# Copies the working tree and runs install.sh.
+cmd_install() {
+  sync_tree
 
   # One log per run; install.log always points to the latest
   local log="$VM_DIR/logs/install-$(date +%Y%m%d-%H%M%S).log"
   mkdir -p "$VM_DIR/logs"
   ln -snf "$log" "$VM_DIR/install.log"
   ssh_vm -t 'bash ~/.local/share/archype/install.sh' 2>&1 | tee "$log"
+  info "Log saved to $log"
+}
+
+# Copies the working tree and runs a single unit. With ARCHYPE_VM_SUDO_PASSWORD set it runs
+# unattended (sudo is unlocked first); otherwise you type the sudo password.
+cmd_unit() {
+  local unit="$1"
+  [[ -n $unit ]] || die "Usage: test/vm unit <name>"
+  [[ -d "$REPO_DIR/units/$unit" ]] || die "No such unit: $unit"
+  sync_tree
+
+  local log="$VM_DIR/logs/unit-$unit-$(date +%Y%m%d-%H%M%S).log"
+  mkdir -p "$VM_DIR/logs"
+  local run="ARCHYPE_PATH=~/.local/share/archype ~/.local/share/archype/bin/archype-unit-install $unit"
+  if [[ -n ${ARCHYPE_VM_SUDO_PASSWORD:-} ]]; then
+    # Passed in the command, not through the terminal, so it isn't echoed into the log
+    local pw
+    pw=$(printf '%q' "$ARCHYPE_VM_SUDO_PASSWORD")
+    ssh_vm -tt "printf '%s\\n' $pw | sudo -S -p '' -v && $run" 2>&1 | tee "$log"
+  else
+    ssh_vm -t "$run" 2>&1 | tee "$log"
+  fi
   info "Log saved to $log"
 }
 
@@ -328,6 +356,7 @@ Usage: test/vm <command>
   reset     Restore snapshot '$SNAPSHOT' (VM must be off)
   up        Boot the VM and wait for SSH
   install   Copy the local working tree into the VM and run install.sh
+  unit      Copy the working tree and run one unit (test/vm unit <name>)
   ssh       Open a shell in the VM
   type      Type text into the VM window (default: the archinstall setup command)
   down      Power off the VM
@@ -343,5 +372,6 @@ ssh)
   cmd_ssh "$@"
   ;;
 type) cmd_type "${2:-}" ;;
+unit) cmd_unit "${2:-}" ;;
 *) usage ;;
 esac

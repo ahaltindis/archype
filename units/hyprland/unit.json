@@ -3,7 +3,7 @@
   "description": "Configure Hyprland window manager and utilities.",
   "version": "1.0.0",
   "config": [
-    ["alacritty/alacritty.toml", ".config/alacritty/alacritty.toml"],
+    ["foot/foot.ini", ".config/foot/foot.ini"],
     ["mako/config", ".config/mako/config"],
     ["swayosd/config.toml", ".config/swayosd/config.toml"],
     ["swayosd/style.css", ".config/swayosd/style.css"],

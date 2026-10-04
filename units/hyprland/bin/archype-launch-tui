@@ -13,4 +13,4 @@ if [[ -n $pid ]]; then
   exit 0
 fi
 
-exec uwsm app -- alacritty --class "$class" -e "$@"
+exec uwsm app -- foot --app-id "$class" "$@"

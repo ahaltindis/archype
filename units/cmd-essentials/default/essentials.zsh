@@ -7,6 +7,11 @@ export SUDO_EDITOR="$EDITOR"
 eval "$(mise activate zsh)"
 
 
+# Aliases
+# Servers often don't know TERM=foot; skip with `command ssh` on hosts that have its terminfo
+alias ssh='TERM=xterm-256color ssh'
+
+
 # Functions
 open() {
   xdg-open "$@" >/dev/null 2>&1 &

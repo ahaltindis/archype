@@ -46,6 +46,12 @@ Things learned the hard way. Each one cost a debugging session.
   `~/.local/share/vicinae/themes/` (id = file name); the first-start screen is skipped by writing
   `~/.local/state/vicinae/onboarding.json` with `{"version":1}`. Without `=`, the calculator only runs
   when nothing else matches.
+- foot keeps `TERM=foot` (its terminfo comes with ncurses) for the full feature set locally. Servers
+  often lack that entry ("unknown terminal type", broken `clear`/vim/htop), so the `ssh` alias in
+  `essentials.zsh` sends `xterm-256color`. To give a host foot's entry:
+  `infocmp -x foot | command ssh host -- tic -x -`.
+- foot themes use `[colors-dark]` / `[colors-light]` (foot 1.28); light themes set
+  `initial-color-theme=light`. `foot -C -c <file>` checks a config.
 - With only Archype's fonts there were no emoji or general-purpose fonts; `noto-fonts` and
   `noto-fonts-emoji` fix web pages.
 

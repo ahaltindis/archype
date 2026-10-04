@@ -23,4 +23,4 @@ hl.config({
 })
 
 -- Scroll faster in the terminal
-hl.window_rule({ match = { class = "Alacritty" }, scroll_touchpad = 1.5 })
+hl.window_rule({ match = { class = "foot" }, scroll_touchpad = 1.5 })

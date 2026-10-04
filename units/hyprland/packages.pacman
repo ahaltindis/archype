@@ -1,4 +1,4 @@
-alacritty                     # installing as a default terminal
+foot                          # terminal
 hyprland
 hyprshot                      # screenshot utility
 satty                         # screenshot edit/save tool that works with hyprshot

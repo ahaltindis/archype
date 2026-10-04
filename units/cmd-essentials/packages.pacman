@@ -15,4 +15,8 @@ wget
 imagemagick
 ffmpeg
 fzf
-ripgrep # for nvim telescope live_grep plugin
+ripgrep # for nvim telescope live_grep plugin, yazi content search
+yazi    # file manager
+fd      # yazi file search
+7zip    # yazi archive preview and extract
+poppler # yazi pdf preview

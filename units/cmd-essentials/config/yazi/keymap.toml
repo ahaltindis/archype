@@ -1,0 +1,23 @@
+[mgr]
+prepend_keymap = [
+  # Disable cycle on navigation
+  { on = "k", run = "arrow -1", desc = "Previous file" },
+  { on = "j", run = "arrow 1", desc = "Next file" },
+
+  # Custom goto
+  { on = [ "g", "p" ], run = "cd ~/Projects",   desc = "Go ~/Projects" },
+
+  # Execute Script
+  {
+    on = [ "e", "l" ],
+    run = "shell --block -- git rev-parse --is-inside-work-tree > /dev/null 2>&1 && lazygit || true",
+    desc = "Run Lazygit"
+  },
+]
+
+[spot]
+prepend_keymap = [
+  # Disable cycle on navigation
+  { on = "k", run = "arrow -1", desc = "Previous line" },
+  { on = "j", run = "arrow 1", desc = "Next line" },
+]

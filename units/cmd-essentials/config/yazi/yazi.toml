@@ -1,0 +1,13 @@
+# Yazi settings. Only the changes from the defaults are here:
+# https://github.com/sxyazi/yazi/blob/main/yazi-config/preset/yazi-default.toml
+
+[mgr]
+ratio = [1, 4, 4]
+linemode = "size"
+show_hidden = true
+
+[opener]
+# Keybindings don't run through zsh, so $EDITOR can be unset there
+edit = [
+  { run = "${EDITOR:-nvim} %s", desc = "$EDITOR", block = true },
+]

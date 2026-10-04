@@ -5,6 +5,9 @@
   "config": [
     ["git.conf", ".config/git/config", "s"],
     ["tmux/tmux.conf", ".config/tmux/tmux.conf"],
+    ["yazi/yazi.toml", ".config/yazi/yazi.toml"],
+    ["yazi/theme.toml", ".config/yazi/theme.toml"],
+    ["yazi/keymap.toml", ".config/yazi/keymap.toml"],
     ["nvim/lua/config/autocmds.lua", ".config/nvim/lua/config/autocmds.lua"],
     ["nvim/lua/config/keymaps.lua", ".config/nvim/lua/config/keymaps.lua"],
     ["nvim/lua/config/lazy.lua", ".config/nvim/lua/config/lazy.lua"],

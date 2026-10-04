@@ -1,0 +1,6 @@
+# Colors come from the current Archype theme, linked as the "archype" flavor by the installer.
+# Override single styles below; see https://yazi-rs.github.io/docs/configuration/theme
+
+[flavor]
+dark = "archype"
+light = "archype"

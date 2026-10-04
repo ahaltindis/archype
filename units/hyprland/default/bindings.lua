@@ -14,6 +14,7 @@ end
 bind("SUPER + SPACE", "Launcher", "uwsm app -- vicinae toggle")
 bind("SUPER + RETURN", "Terminal", "uwsm app -- alacritty")
 bind("SUPER + B", "Browser", "uwsm app -- brave")
+bind("SUPER + E", "File manager", "uwsm app -- alacritty -e yazi")
 
 -- System
 bind("SUPER + CTRL + L", "Lock screen", "archype-lock-screen")

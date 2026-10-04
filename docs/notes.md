@@ -8,6 +8,8 @@ Things learned the hard way. Each one cost a debugging session.
   `hyprland.lua` over `hyprland.conf` at **start**; a reload doesn't switch formats.
 - **`hyprctl dispatch` takes Lua** with a Lua config: `hyprctl dispatch 'hl.dsp.dpms({ action = "disable" })'`.
   The old `hyprctl dispatch dpms off` fails. Check `hypridle.conf` and scripts when adding commands.
+- `hyprctl keyword` doesn't work with a Lua config. Try an option live with
+  `hyprctl eval 'hl.config({ input = { follow_mouse = 2 } })'`; a reload resets it.
 - `require()` caches modules for Hyprland's lifetime. `archype.lua` clears `archype.*` and `hypr.*` from
   `package.loaded` so `hyprctl reload` sees edits.
 - **Hyprland reloads when its config files change.** If a file or the `~/.config/archype/hyprland` link

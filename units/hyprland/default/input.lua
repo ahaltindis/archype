@@ -24,6 +24,8 @@ hl.config({
     kb_options = "compose:caps",
     -- Click to focus; hovering doesn't change focus, but scrolling reaches the window under the cursor
     follow_mouse = 2,
+    -- Same for moving between tiled and floating windows (default 1 switches focus)
+    float_switch_override_focus = 0,
     -- -1.0 to 1.0, 0 means no change
     sensitivity = 0,
     natural_scroll = true,

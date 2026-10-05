@@ -1,0 +1,3 @@
+# Terminal for xdg-terminal-exec, vicinae and other launchers. Without it they could pick
+# footclient or foot-server, which need a running foot server.
+foot.desktop

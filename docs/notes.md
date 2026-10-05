@@ -54,6 +54,19 @@ Things learned the hard way. Each one cost a debugging session.
   `infocmp -x foot | command ssh host -- tic -x -`.
 - foot themes use `[colors-dark]` / `[colors-light]` (foot 1.28); light themes set
   `initial-color-theme=light`. `foot -C -c <file>` checks a config.
+- **Default apps** come from `/etc/xdg/mimeapps.list` (shipped by the hyprland unit); the user's
+  `~/.config/mimeapps.list` wins over it. `XDG_UTILS_DEBUG_LEVEL=3 xdg-mime query default <type>`
+  shows the lookup.
+- On Hyprland, xdg-open runs in "generic" mode and **ignores `Terminal=true`**: nvim or yazi opened
+  from a launcher, Brave or a script starts with no terminal and fails silently. That's why text and
+  folders open through `archype-nvim.desktop`/`archype-yazi.desktop`, which call
+  `xdg-terminal-exec`.
+- xdg-mime and gio skip a default whose `Exec` program isn't installed and fall back to another app.
+- foot has three `TerminalEmulator` entries (foot, footclient, foot-server). Without
+  `/etc/xdg/xdg-terminals.list` naming `foot.desktop`, xdg-terminal-exec could pick one that needs a
+  foot server. vicinae reads the same list for terminal apps.
+- `libmupdf` needs a `tesseract-data-*` package; with `--noconfirm` pacman takes the first one
+  (Afrikaans) unless `tesseract-data-eng` is in the same install.
 - With only Archype's fonts there were no emoji or general-purpose fonts; `noto-fonts` and
   `noto-fonts-emoji` fix web pages.
 

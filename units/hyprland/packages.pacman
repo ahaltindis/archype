@@ -1,4 +1,11 @@
 foot                          # terminal
+xdg-terminal-exec             # opens terminal apps from launchers and xdg-open (see xdg/)
+imv                           # image viewer
+mpv                           # video and audio player
+mpv-mpris                     # media keys and playerctl control mpv
+zathura                       # pdf viewer
+tesseract-data-eng            # OCR data libmupdf needs; listed first or --noconfirm picks Afrikaans
+zathura-pdf-mupdf             # pdf backend for zathura
 hyprland
 hyprshot                      # screenshot utility
 satty                         # screenshot edit/save tool that works with hyprshot

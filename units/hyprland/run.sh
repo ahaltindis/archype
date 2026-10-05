@@ -33,3 +33,16 @@ if [[ -f $chromium_theme ]]; then
     echo "$policy" | sudo tee /etc/brave/policies/managed/color.json >/dev/null
   fi
 fi
+
+# Default apps for file types, and foot as the terminal for launchers (xdg-terminal-exec, vicinae).
+# System-wide files: ~/.config/mimeapps.list and ~/.config/xdg-terminals.list still win over them.
+install_system_file() {
+  if ! cmp -s "$1" "$2"; then
+    sudo install -Dm644 "$1" "$2"
+  fi
+}
+install_system_file "$UNIT_PATH/xdg/mimeapps.list" /etc/xdg/mimeapps.list
+install_system_file "$UNIT_PATH/xdg/xdg-terminals.list" /etc/xdg/xdg-terminals.list
+for entry in "$UNIT_PATH"/xdg/applications/*.desktop; do
+  install_system_file "$entry" "/usr/local/share/applications/$(basename "$entry")"
+done

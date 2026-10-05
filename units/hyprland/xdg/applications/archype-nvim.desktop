@@ -1,0 +1,11 @@
+# Default app for file types (see ../mimeapps.list). xdg-open ignores Terminal=true,
+# so this entry opens the terminal itself.
+[Desktop Entry]
+Type=Application
+Name=Neovim (Archype)
+Comment=Edit in Neovim
+Exec=xdg-terminal-exec nvim %F
+Icon=nvim
+Terminal=false
+NoDisplay=true
+MimeType=text/english;text/plain;text/x-makefile;text/x-c++hdr;text/x-c++src;text/x-chdr;text/x-csrc;text/x-java;text/x-moc;text/x-pascal;text/x-tcl;text/x-tex;application/x-shellscript;text/x-c;text/x-c++;

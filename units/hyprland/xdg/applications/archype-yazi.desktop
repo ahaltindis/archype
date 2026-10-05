@@ -1,0 +1,11 @@
+# Default app for file types (see ../mimeapps.list). xdg-open ignores Terminal=true,
+# so this entry opens the terminal itself.
+[Desktop Entry]
+Type=Application
+Name=Yazi (Archype)
+Comment=Browse in Yazi
+Exec=xdg-terminal-exec yazi %f
+Icon=yazi
+Terminal=false
+NoDisplay=true
+MimeType=inode/directory;

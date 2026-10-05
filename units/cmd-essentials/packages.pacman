@@ -20,3 +20,5 @@ yazi    # file manager
 fd      # yazi file search
 7zip    # yazi archive preview and extract
 poppler # yazi pdf preview
+resvg   # yazi svg preview
+exiftool # yazi exif viewer

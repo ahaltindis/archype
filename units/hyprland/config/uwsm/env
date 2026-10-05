@@ -3,3 +3,6 @@
 
 # Archype commands (archype-*) are linked here
 export PATH="$HOME/.local/bin:$PATH"
+
+# Terminal for tools that read $TERMINAL; xdg-terminal-exec picks foot (see /etc/xdg/xdg-terminals.list)
+export TERMINAL=xdg-terminal-exec

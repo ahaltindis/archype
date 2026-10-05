@@ -6,8 +6,31 @@ ratio = [1, 4, 4]
 linemode = "size"
 show_hidden = true
 
+# Enter runs the first opener of a rule; O shows all of them. "open" is xdg-open, which uses the
+# system defaults (/etc/xdg/mimeapps.list): imv for images, zathura for pdf, the browser for html.
 [opener]
 # Keybindings don't run through zsh, so $EDITOR can be unset there
 edit = [
   { run = "${EDITOR:-nvim} %s", desc = "$EDITOR", block = true },
+]
+browser = [
+  { run = 'gtk-launch "$(xdg-settings get default-web-browser)" %s1', desc = "Browser", orphan = true },
+]
+video = [
+  # Next/previous (< and >) go through the other videos in the folder
+  { run = "mpv --autocreate-playlist=same %s1", desc = "mpv", orphan = true },
+]
+audio = [
+  # Plays in yazi's terminal until q
+  { run = "mpv --no-video %s", desc = "mpv", block = true },
+  { run = "mpv --player-operation-mode=pseudo-gui --autocreate-playlist=same %s1", desc = "mpv window (folder playlist)", orphan = true },
+]
+
+[open]
+prepend_rules = [
+  { mime = "text/html", use = ["open", "edit", "reveal"] },
+  { mime = "application/xhtml+xml", use = ["open", "edit", "reveal"] },
+  { mime = "video/*", use = ["video", "reveal"] },
+  { mime = "audio/*", use = ["audio", "reveal"] },
+  { mime = "application/pdf", use = ["open", "browser", "reveal"] },
 ]

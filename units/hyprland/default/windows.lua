@@ -38,6 +38,10 @@ window({ tag = "pip" }, {
 window({ class = "(Wiremix|bluetui|nmtui|com.gabm.satty|org.gnome.NautilusPreviewer|Archype|TUI.float)" },
   { tag = "+floating-window" })
 window({ class = "xdg-desktop-portal-gtk" }, { tag = "+floating-window" })
+-- Extension windows popped out of Brave, like Bitwarden (class is brave-<extension id>-<profile>).
+-- No forced size: they pick their own and flicker when it's overridden.
+-- Web apps installed from Brave get the same kind of class, so they float too.
+window({ class = "brave-[a-p]{32}-.*" }, { float = true, center = true })
 window({ tag = "floating-window" }, { float = true, center = true, size = { 800, 600 } })
 
 -- No transparency on media windows

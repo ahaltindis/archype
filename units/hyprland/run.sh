@@ -18,6 +18,11 @@ ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/them
 [[ -f ~/.local/state/vicinae/onboarding.json ]] ||
   echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
 
+# A running vicinae doesn't see newly installed or upgraded extensions until it restarts
+if pgrep -x vicinae-server >/dev/null; then
+  setsid uwsm app -- vicinae server --replace >/dev/null 2>&1 &
+fi
+
 # Brave as the default browser, unless one was already chosen
 if [[ -z "$(xdg-settings get default-web-browser 2>/dev/null)" ]]; then
   xdg-settings set default-web-browser brave-browser.desktop

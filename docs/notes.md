@@ -54,7 +54,9 @@ Things learned the hard way. Each one cost a debugging session.
 - vicinae: config is `~/.config/vicinae/settings.json`; themes are TOML in
   `~/.local/share/vicinae/themes/` (id = file name); the first-start screen is skipped by writing
   `~/.local/state/vicinae/onboarding.json` with `{"version":1}`. Without `=`, the calculator only runs
-  when nothing else matches.
+  when nothing else matches. A running vicinae only watches extension folders that existed when it
+  started (`/usr/share/vicinae/extensions/` appears with the first extension package), so the
+  hyprland unit restarts it with `vicinae server --replace`.
 - foot keeps `TERM=foot` (its terminfo comes with ncurses) for the full feature set locally. Servers
   often lack that entry ("unknown terminal type", broken `clear`/vim/htop), so the `ssh` alias in
   `essentials.zsh` sends `xterm-256color`. To give a host foot's entry:

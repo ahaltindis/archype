@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Opens foot in the directory of the focused terminal's shell, or in $HOME when the focused window
+# isn't a terminal at a shell prompt (yazi, tmux or other programs started directly in foot).
+# Usage: archype-launch-terminal [command...]   (e.g. yazi)
+
+cwd=$HOME
+terminal_pid=$(hyprctl activewindow -j | jq -r '.pid // empty')
+
+if [[ -n $terminal_pid ]]; then
+  # The terminal's newest child is the shell
+  shell_pid=$(cat /proc/"$terminal_pid"/task/*/children 2>/dev/null | tr ' ' '\n' | sort -n | tail -1)
+  if [[ -n $shell_pid ]] && grep -Fqsx "$(readlink -f /proc/"$shell_pid"/exe)" /etc/shells; then
+    dir=$(readlink -f /proc/"$shell_pid"/cwd)
+    [[ -d $dir ]] && cwd=$dir
+  fi
+fi
+
+exec uwsm app -- foot --working-directory "$cwd" "$@"

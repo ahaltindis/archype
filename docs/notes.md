@@ -34,7 +34,8 @@ Things learned the hard way. Each one cost a debugging session.
 
 - With `curl ... | bash`, stdin is the script itself: a child that reads stdin eats the rest of
   `boot.sh`. `boot.sh` runs `install.sh </dev/tty`.
-- gum's TUI crashes when its output goes into a pipe (`boot.sh` tees everything into the log). Avoid
+- gum's TUI crashes when its output goes into a pipe (`install.sh` tees everything into
+  `~/.local/log/archype/install_<date>.log`, on every run; `boot.sh` adds no log of its own). Avoid
   interactive TUIs in the installer; better yet, don't ask anything during install.
 - **makepkg installs with `sudo -k`**, which ignores cached credentials. yay is bootstrapped with
   `makepkg -s` + our own `sudo pacman -U`.

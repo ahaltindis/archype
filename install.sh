@@ -6,6 +6,8 @@ export ARCHYPE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGO_FILE="${ARCHYPE_PATH}/logo-archype.txt"
 BIN_DIR="${ARCHYPE_PATH}/bin"
 INSTALL_STATE_DIR="$HOME/.local/state/archype/install"
+LOGS_DIR="$HOME/.local/log/archype"
+LOG_FILE="$LOGS_DIR/install_$(date +%Y%m%d_%H%M%S).log"
 USER_BIN_DIR="$HOME/.local/bin"
 TMP_DIR="/tmp/archype"
 
@@ -24,12 +26,33 @@ catch_errors() {
   print_active "\nYou can retry by running: bash $ARCHYPE_PATH/install.sh"
 }
 
+# Everything printed from here on also goes to the log file; the screen keeps showing it
+start_logging() {
+  mkdir -p "$LOGS_DIR"
+  exec 3>&1 4>&2
+  exec > >(tee "$LOG_FILE") 2>&1
+  TEE_PID=$!
+}
+
+# Gives the terminal back and lets tee write the last lines before the script exits
+stop_logging() {
+  [[ -n "$TEE_PID" ]] || return 0
+  exec >&3 2>&4 3>&- 4>&-
+  # Not `wait`: a program left running by a unit could hold the pipe open forever
+  local i
+  for i in {1..20}; do
+    kill -0 "$TEE_PID" 2>/dev/null || break
+    sleep 0.1
+  done
+  echo "Log saved to: $LOG_FILE"
+}
+
 trap catch_errors ERR
 
 # Ask for the sudo password once, then keep it fresh so a long install never stops to ask again
 start_sudo_keepalive() {
   sudo -v
-  # Output to /dev/null: its sleep would otherwise hold boot.sh's log pipe open after the install ends
+  # Output to /dev/null: its sleep would otherwise hold the log pipe open after the install ends
   while kill -0 $$ 2>/dev/null; do
     sudo -n -v
     sleep 60
@@ -42,7 +65,12 @@ stop_sudo_keepalive() {
   return 0
 }
 
-trap stop_sudo_keepalive EXIT
+finish() {
+  stop_sudo_keepalive
+  stop_logging
+}
+
+trap finish EXIT
 
 mkdir -p ${INSTALL_STATE_DIR}
 mkdir -p ${USER_BIN_DIR}
@@ -90,8 +118,7 @@ check_already_installed() {
 }
 
 print_status() {
-  clear
-  print_logo
+  print_title "-----------------------------"
   local unit
   for unit in "${to_install[@]}"; do
     if [[ ${installed[$unit]} ]]; then
@@ -125,6 +152,7 @@ install_prerequisites() {
 
 main() {
   clear
+  start_logging
   print_logo
   print_title "Starting installation.."
 

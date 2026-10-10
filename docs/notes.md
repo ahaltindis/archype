@@ -18,6 +18,13 @@ Things learned the hard way. Each one cost a debugging session.
   and why `boot.sh` (which deletes and re-clones) is only for the first install.
 - Keybindings and waybar clicks run in the session environment, not a shell. `~/.local/bin` is on the
   session `PATH` only through `~/.config/uwsm/env`.
+- waybar's workspaces module only draws window icons (`workspace-taskbar`) when `format` contains
+  `{windows}`. A module instance name becomes a CSS class: `hyprland/workspaces#hidden` gets `.hidden`,
+  which Archype's `style.css` makes invisible. With `ignore-workspaces`, windows opened after waybar
+  started never show up when moved to a shown special workspace (waybar 0.15 compares
+  `special:hidden` with `hidden`), so the hidden-windows module hides the other workspaces with CSS.
+- waybar can lose its connection to Hyprland's event socket and never reconnects: workspaces stop
+  updating. `archype-restart-app waybar` fixes it (`SUPER + CTRL + B` only hides/shows the same bar).
 - Killing waybar abruptly can leave a blank "ghost" layer on top (`hyprctl layers` shows `pid: -1`).
   Seen only during testing; a reboot clears it.
 - QEMU's `screendump` doesn't work with the GL display ("no surface"); take screenshots with `grim`

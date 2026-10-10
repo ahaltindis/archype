@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Brings a hidden window (SUPER + M moves it to special:hidden) back to the current workspace.
+# Without an address, picks one from a list of hidden windows.
+# Usage: archype-window-unhide [address]
+
+address="$1"
+
+if [[ -z $address ]]; then
+  hidden=$(hyprctl clients -j | jq -r '.[] | select(.workspace.name == "special:hidden") | [.address, .class, .title] | @tsv')
+  if [[ -z $hidden ]]; then
+    notify-send "No hidden windows"
+    exit 0
+  fi
+
+  index=$(cut -f2- <<<"$hidden" | sed 's/\t/  ·  /' |
+    vicinae dmenu -n "Hidden windows" -p "Show window..." -f index --no-quick-look) || exit 0
+  [[ $index =~ ^[0-9]+$ ]] || exit 0
+  address=$(sed -n "$((index + 1))p" <<<"$hidden" | cut -f1)
+fi
+
+workspace=$(hyprctl activeworkspace -j | jq -r .id)
+hyprctl dispatch "hl.dsp.window.move({ workspace = \"$workspace\", window = \"address:$address\" })" >/dev/null

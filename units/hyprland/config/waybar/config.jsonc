@@ -4,7 +4,7 @@
   "position": "top",
   "spacing": 0,
   "height": 26,
-  "modules-left": ["custom/logo", "hyprland/workspaces"],
+  "modules-left": ["custom/logo", "hyprland/workspaces", "hyprland/workspaces#minimized"],
   "modules-center": ["clock"],
   "modules-right": [
     "tray",
@@ -30,6 +30,18 @@
       "3": [],
       "4": [],
       "5": []
+    }
+  },
+  // Icons of hidden windows (SUPER + M); a click brings one back. Not "#hidden": the instance
+  // name becomes a CSS class, and .hidden is invisible. Other workspaces are hidden in style.css,
+  // not with ignore-workspaces: waybar 0.15 then loses windows opened after it started.
+  "hyprland/workspaces#minimized": {
+    "show-special": true,
+    "format": "{windows}",
+    "workspace-taskbar": {
+      "enable": true,
+      "icon-size": 14,
+      "on-click-window": "archype-window-unhide {address}"
     }
   },
   "custom/logo": {

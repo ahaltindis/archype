@@ -42,6 +42,10 @@ bind("SUPER + P", "Pseudo window", hl.dsp.window.pseudo())
 bind("SUPER + V", "Toggle floating", hl.dsp.window.float({ action = "toggle" }))
 bind("SUPER + F", "Full screen", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 
+-- Hidden windows wait in special:hidden; the top bar shows their icons, a click brings one back
+bind("SUPER + M", "Hide window", hl.dsp.window.move({ workspace = "special:hidden", follow = false }))
+bind("SUPER + SHIFT + M", "Show a hidden window", "archype-window-unhide")
+
 for key, dir in pairs({ H = "l", J = "d", K = "u", L = "r" }) do
   local name = ({ l = "left", d = "down", u = "up", r = "right" })[dir]
   bind("SUPER + " .. key, "Move focus " .. name, hl.dsp.focus({ direction = dir }))

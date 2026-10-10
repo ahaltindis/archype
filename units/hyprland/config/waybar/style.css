@@ -36,6 +36,23 @@
   opacity: 0.5;
 }
 
+/* Hidden windows: show only special:hidden. GTK can't remove the other workspace buttons,
+   so they shrink to nothing; -14px cancels each icon's width (icon-size in config.jsonc). */
+#workspaces.minimized button:not(.special),
+#workspaces.minimized button:not(.special) * {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  font-size: 0;
+  opacity: 0;
+}
+
+#workspaces.minimized button:not(.special) image {
+  margin-left: -14px;
+}
+
 #tray,
 #battery,
 #network,

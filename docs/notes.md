@@ -56,7 +56,7 @@ Things learned the hard way. Each one cost a debugging session.
   `~/.local/state/vicinae/onboarding.json` with `{"version":1}`. Without `=`, the calculator only runs
   when nothing else matches. A running vicinae only watches extension folders that existed when it
   started (`/usr/share/vicinae/extensions/` appears with the first extension package), so the
-  hyprland unit restarts it with `vicinae server --replace`.
+  hyprland unit (re)starts it with `vicinae server --replace` when the installer runs inside Hyprland.
 - foot keeps `TERM=foot` (its terminfo comes with ncurses) for the full feature set locally. Servers
   often lack that entry ("unknown terminal type", broken `clear`/vim/htop), so the `ssh` alias in
   `essentials.zsh` sends `xterm-256color`. To give a host foot's entry:

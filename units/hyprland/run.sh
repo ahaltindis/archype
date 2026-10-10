@@ -18,8 +18,9 @@ ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/them
 [[ -f ~/.local/state/vicinae/onboarding.json ]] ||
   echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
 
-# A running vicinae doesn't see newly installed or upgraded extensions until it restarts
-if pgrep -x vicinae-server >/dev/null; then
+# A running vicinae doesn't see newly installed or upgraded extensions until it restarts. Inside Hyprland,
+# (re)start it; outside (first install from a TTY, ssh) the autostart starts it at login.
+if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then
   setsid uwsm app -- vicinae server --replace >/dev/null 2>&1 &
 fi
 

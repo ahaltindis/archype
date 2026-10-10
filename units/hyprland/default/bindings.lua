@@ -13,7 +13,8 @@ end
 -- Apps
 bind("SUPER + SPACE", "Launcher", "uwsm app -- vicinae toggle")
 bind("SUPER + RETURN", "Terminal", "archype-launch-terminal")
-bind("SUPER + B", "Browser", "uwsm app -- brave")
+bind("SUPER + B", "Browser links", "vicinae deeplink vicinae://launch/@ahaltindis/archype/links")
+bind("SUPER + SHIFT + B", "Browser", "uwsm app -- brave")
 bind("SUPER + E", "File manager", "archype-launch-terminal yazi")
 
 -- System

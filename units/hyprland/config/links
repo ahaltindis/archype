@@ -1,0 +1,14 @@
+# Links for the Super+B menu (archype-vicinae-ext), opened in Brave. Copied once; edit freely.
+#
+# One link per line: [name] url [container] [mode]
+#   name       optional, may have spaces (but no "." or "://"); without it the menu shows the address
+#   container  a Brave container's name, "temp" for a new temporary container, "-" for none (default)
+#   mode       tab (default), window (new window) or app (borderless; ignores the container for now)
+#
+# Examples:
+#   Mail     mail.google.com   Personal
+#   Work     github.com        Work       window
+#   Try it   example.com       temp
+
+GitHub      github.com
+YouTube     youtube.com

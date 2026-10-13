@@ -18,6 +18,13 @@ require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    -- LazyVim extras from other Archype units (lua/archype/extras/*.lua); they must come before your plugins
+    {
+      import = "archype.extras",
+      cond = function()
+        return vim.uv.fs_stat(vim.fn.stdpath("config") .. "/lua/archype/extras") ~= nil
+      end,
+    },
     -- import/override with your plugins
     { import = "plugins" },
   },

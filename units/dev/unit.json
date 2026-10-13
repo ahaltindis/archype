@@ -1,0 +1,8 @@
+{
+  "name": "Dev",
+  "description": "Programming languages and their editor support.",
+  "version": "1.0.0",
+  "config": [
+    ["nvim/lua/archype/extras/go.lua", ".config/nvim/lua/archype/extras/go.lua"]
+  ]
+}

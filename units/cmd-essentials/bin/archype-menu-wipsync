@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# A menu for wipsync (SUPER + W): open its TUI, or pull or push all folders.
+# While the wipsync service runs, pull and push run in it: its tray icon shows them and it tells how
+# they went. Without it, they run here, and this tells how they went.
+
+choice=$(printf '%s\n' "Open wipsync" "Pull all" "Push all" |
+  vicinae dmenu -n "wipsync" -p "wipsync..." --no-quick-look) || exit 0
+
+case $choice in
+"Open wipsync") exec archype-launch-tui wipsync wipsync tui ;;
+"Pull all") action=pull ;;
+"Push all") action=push ;;
+*) exit 0 ;;
+esac
+
+if systemctl --user is-active --quiet wipsync; then
+  exec wipsync "$action" --all >/dev/null 2>&1
+fi
+if out=$(wipsync "$action" --all 2>&1); then
+  notify-send --app-name=wipsync "wipsync: $action all" "$(tail -n 1 <<<"$out")"
+else
+  notify-send --app-name=wipsync --urgency=critical "wipsync: $action all" "$out"
+fi

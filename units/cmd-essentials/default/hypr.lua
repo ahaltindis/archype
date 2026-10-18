@@ -4,3 +4,5 @@ hl.on("hyprland.start", function()
   -- Wait for the notification daemon to be up
   hl.exec_cmd("sleep 3 && archype-git-identity-reminder")
 end)
+
+hl.bind("SUPER + W", hl.dsp.exec_cmd("archype-menu-wipsync"), { description = "wipsync menu" })

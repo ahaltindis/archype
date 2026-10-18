@@ -8,6 +8,7 @@
     ["yazi/yazi.toml", ".config/yazi/yazi.toml"],
     ["yazi/theme.toml", ".config/yazi/theme.toml"],
     ["yazi/keymap.toml", ".config/yazi/keymap.toml"],
+    ["wipsync/config.toml", ".config/wipsync/config.toml"],
     ["nvim/lua/config/autocmds.lua", ".config/nvim/lua/config/autocmds.lua"],
     ["nvim/lua/config/keymaps.lua", ".config/nvim/lua/config/keymaps.lua"],
     ["nvim/lua/config/lazy.lua", ".config/nvim/lua/config/lazy.lua"],

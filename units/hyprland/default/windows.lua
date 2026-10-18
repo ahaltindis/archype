@@ -35,7 +35,7 @@ window({ tag = "pip" }, {
 })
 
 -- Floating windows: small tools and file dialogs
-window({ class = "(Wiremix|bluetui|nmtui|com.gabm.satty|org.gnome.NautilusPreviewer|Archype|TUI.float)" },
+window({ class = "(Wiremix|bluetui|nmtui|wipsync|com.gabm.satty|org.gnome.NautilusPreviewer|Archype|TUI.float)" },
   { tag = "+floating-window" })
 window({ class = "xdg-desktop-portal-gtk" }, { tag = "+floating-window" })
 -- Extension windows popped out of Brave, like Bitwarden (class is brave-<extension id>-<profile>).

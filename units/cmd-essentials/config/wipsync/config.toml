@@ -1,0 +1,6 @@
+# wipsync's own settings. The repository and the folders are in its database
+# (wipsync init, wipsync add), not here.
+
+[tray]
+# A click on the tray icon toggles the TUI in a floating window.
+open = "systemd-run --user --collect --quiet archype-launch-tui wipsync wipsync tui"

@@ -54,6 +54,7 @@ y() {
   local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
   yazi "$@" --cwd-file="$tmp"
   IFS= read -r -d '' cwd <"$tmp"
-  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+  # Remote folders (sftp://) can't be cd'd into
+  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && [[ "$cwd" != sftp://* ]] && builtin cd -- "$cwd"
   rm -f -- "$tmp"
 }

@@ -7,6 +7,9 @@ prepend_keymap = [
   # Custom goto
   { on = [ "g", "p" ], run = "cd ~/Projects",   desc = "Go ~/Projects" },
 
+  # Download remote (sftp) files so they can be previewed; Enter downloads and opens
+  { on = "F", run = "shell -- ya emit download %S", desc = "Download selected files" },
+
   # Execute Script
   {
     on = [ "e", "l" ],

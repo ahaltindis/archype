@@ -14,6 +14,8 @@ inetutils
 wget
 imagemagick
 ffmpeg
+yt-dlp
+deno     # yt-dlp needs a JavaScript runtime for YouTube
 fzf
 ripgrep # for nvim telescope live_grep plugin, yazi content search
 yazi    # file manager

@@ -10,6 +10,7 @@
     ["yazi/keymap.toml", ".config/yazi/keymap.toml"],
     ["yazi/init.lua", ".config/yazi/init.lua"],
     ["wipsync/config.toml", ".config/wipsync/config.toml"],
+    ["yt-dlp/config", ".config/yt-dlp/config"],
     ["nvim/lua/config/autocmds.lua", ".config/nvim/lua/config/autocmds.lua"],
     ["nvim/lua/config/keymaps.lua", ".config/nvim/lua/config/keymaps.lua"],
     ["nvim/lua/config/lazy.lua", ".config/nvim/lua/config/lazy.lua"],

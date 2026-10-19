@@ -1,0 +1,20 @@
+# Archype defaults for yt-dlp
+
+-P ~/Videos
+-o "%(title)s [%(id)s].%(ext)s"
+
+# Up to 1080p with the video's original audio track, never a dub (yt-dlp can't tell YouTube's
+# AI dubs from real ones). For another dub, list the audio tracks with `yt-dlp -F <url>` and pick
+# one by language: `yt-dlp -f 'bv*+ba[language^=tr]' <url>` (audio only: `yt-dlp -x -f 'ba[language^=tr]' <url>`).
+-S res:1080
+-f bv*+ba/b
+--merge-output-format mp4
+
+# Turkish and English subtitles, only the ones made by people (no auto-generated)
+--sub-langs tr,en.*
+--embed-subs
+
+--embed-metadata
+--embed-thumbnail
+--embed-chapters
+--sponsorblock-mark all

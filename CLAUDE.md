@@ -31,7 +31,7 @@ The v1 plan, decisions and the "Later" list are in `docs/v1.md`. Gotchas learned
   - `run.sh`: runs as a separate process; must be safe to run twice
   - `default/hypr.lua`: any unit can add Hyprland settings this way
   - `themes/`: linked into `~/.config/archype/themes`; `~/.config/archype/current/theme` picks one
-- Units: `preflight`, `system`, `cmd`, `hyprland`, `boot`, `cmd-essentials`, `dev`.
+- Units: `preflight`, `system`, `cmd`, `hyprland`, `boot`, `cmd-essentials`, `dev`, `print-scan`.
 - Hyprland config is Lua: `~/.config/hypr/hyprland.lua` (user) loads
   `~/.config/archype/hyprland/archype.lua` (defaults, theme, units' `hypr.lua`), then the user's overrides.
 

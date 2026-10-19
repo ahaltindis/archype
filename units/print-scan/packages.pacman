@@ -1,0 +1,4 @@
+sane                          # scanner access (scanimage -L lists scanners)
+sane-airscan                  # driverless network scanners (eSCL/AirScan and WSD)
+avahi                         # finds network scanners (mDNS); sane-airscan talks to it
+simple-scan                   # Document Scanner: scan to PDF, multi-page

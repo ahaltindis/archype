@@ -1,0 +1,8 @@
+# Extra file type rules for `file` (libmagic), which xdg-open and yazi use to pick an app.
+# See magic(5); `file --mime-type <file>` checks a rule.
+
+# DER PKCS#7/CMS signed data, e.g. e-signed documents (often still named .pdf): a SEQUENCE holding
+# OID 1.2.840.113549.1.7.2. `file` knows it but gives no mime type, so xdg-open used the browser.
+0	byte	0x30
+>1	search/6	\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x02	PKCS#7 signed data
+!:mime	application/pkcs7-mime

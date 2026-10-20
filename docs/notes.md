@@ -71,6 +71,10 @@ Things learned the hard way. Each one cost a debugging session.
   from a launcher, Brave or a script starts with no terminal and fails silently. That's why text and
   folders open through `archype-nvim.desktop`/`archype-yazi.desktop`, which call
   `xdg-terminal-exec`.
+- xdg-open (generic mode) and yazi get the file type from `file`, by content only. Types `file`
+  doesn't name, like e-signed PKCS#7 files (often named .pdf), get a rule in `~/.magic` (hyprland
+  unit). Installing `perl-file-mimeinfo` would switch xdg-mime to extension-first detection, which
+  sends signed `.pdf` files to zathura.
 - xdg-mime and gio skip a default whose `Exec` program isn't installed and fall back to another app.
 - foot has three `TerminalEmulator` entries (foot, footclient, foot-server). Without
   `/etc/xdg/xdg-terminals.list` naming `foot.desktop`, xdg-terminal-exec could pick one that needs a

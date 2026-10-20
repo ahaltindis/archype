@@ -172,3 +172,6 @@ text/x-c++=archype-nvim.desktop
 
 # archype-yazi.desktop
 inode/directory=archype-yazi.desktop
+
+# archype-open-signed.desktop
+application/pkcs7-mime=archype-open-signed.desktop

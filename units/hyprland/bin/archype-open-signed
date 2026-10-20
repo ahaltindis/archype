@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Opens the document inside a signed file (PKCS#7/CMS, e.g. an e-signed PDF, often named .pdf or .p7m)
+# with its default app; the type is found by the rule in ~/.magic. The signature isn't checked.
+# The document goes to $XDG_RUNTIME_DIR, cleared at logout.
+
+mkdir -p "${XDG_RUNTIME_DIR:-/tmp}/archype-signed"
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/archype-signed/XXXXXX")
+
+# Names like "contract.pdf.p7m" keep their inner extension
+name=$(basename "$1")
+out="$dir/${name%.[pP]7[mM]}"
+
+for format in DER PEM; do
+  if openssl cms -verify -noverify -binary -inform "$format" -in "$1" -out "$out" 2>/dev/null; then
+    exec xdg-open "$out"
+  fi
+done
+
+notify-send -u critical "Can't open $name" "It isn't a PKCS#7 signed file"
+exit 1

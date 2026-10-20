@@ -1,0 +1,10 @@
+# Default app for file types (see ../mimeapps.list). Opens the document inside a signed file.
+[Desktop Entry]
+Type=Application
+Name=Signed Document (Archype)
+Comment=Open the document inside a signed file
+Exec=archype-open-signed %f
+Icon=application-pkcs7-mime
+Terminal=false
+NoDisplay=true
+MimeType=application/pkcs7-mime;

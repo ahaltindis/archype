@@ -75,6 +75,9 @@ Things learned the hard way. Each one cost a debugging session.
   doesn't name, like e-signed PKCS#7 files (often named .pdf), get a rule in `~/.magic` (hyprland
   unit). Installing `perl-file-mimeinfo` would switch xdg-mime to extension-first detection, which
   sends signed `.pdf` files to zathura.
+- When no app opens a file (no default, or it exits with an error), xdg-open's generic mode tries
+  `$BROWSER`, then a hard-coded list starting `x-www-browser:firefox:...`. The hyprland unit's
+  `x-www-browser` notifies with the mime type, then opens it in the default browser instead.
 - xdg-mime and gio skip a default whose `Exec` program isn't installed and fall back to another app.
 - foot has three `TerminalEmulator` entries (foot, footclient, foot-server). Without
   `/etc/xdg/xdg-terminals.list` naming `foot.desktop`, xdg-terminal-exec could pick one that needs a

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# xdg-open's last resort (see docs/notes.md): it runs this when no app opened a file, before trying
+# firefox and other browsers. Tells why, then opens it in the default browser. URLs just go there.
+
+file="${1#file://}"
+file=$(printf '%b' "${file//%/\\x}")
+
+if [[ -e $file ]]; then
+  mime=$(xdg-mime query filetype "$file")
+  app=$(xdg-mime query default "$mime")
+  if [[ -n $app ]]; then
+    reason="${app%.desktop} couldn't open it"
+  else
+    reason="No app for this type"
+  fi
+  notify-send "Opening $(basename "$file") in the browser" "$reason"$'\n'"$mime"$'\n'"$(file -b "$file")"
+fi
+
+exec gtk-launch "$(xdg-settings get default-web-browser)" "$1"

@@ -101,10 +101,12 @@
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "tooltip-format": "Playing at {volume}%",
     "scroll-step": 5,
+    "states": { "none": 1, "low": 31, "mid": 69, "high": 1000 },
+    "format-none": "",
+    "format-low": "",
+    "format-mid": "",
+    "format-high": "",
     "format-muted": "󰝟",
-    "format-icons": {
-      "default": ["", "", ""]
-    }
   },
   "tray": {
     "icon-size": 12,

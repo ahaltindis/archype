@@ -27,6 +27,11 @@ for file in /etc/systemd/network/20-ethernet.network /etc/systemd/network/20-wla
   fi
 done
 
+# Kernel upgrades (every install runs pacman -Syu) remove the running kernel's modules, so a module
+# not loaded yet (wireguard, a USB drive's filesystem) fails until a reboot. kernel-modules-hook keeps
+# them; this service deletes the kept copy on the next boot.
+sudo systemctl enable linux-modules-cleanup.service
+
 # Bluetooth
 sudo systemctl enable bluetooth.service
 

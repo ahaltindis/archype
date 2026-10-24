@@ -1,3 +1,4 @@
+kernel-modules-hook           # modules keep loading after a kernel upgrade, until the reboot
 networkmanager                # network (wired, wifi, vpn); control with nmtui/nmcli
 pipewire                      # audio server
 pipewire-alsa                 # route ALSA apps through pipewire

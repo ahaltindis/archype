@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # VPNs from a folder, through NetworkManager: one .conf per WireGuard VPN in ~/.config/vpn/wireguard/
-# (the file name, without .conf, is the VPN's name). New, changed and deleted files are picked up each
-# time the menu opens or the VPN is toggled. Profiles made some other way are listed but never removed.
+# (the file name, without .conf, is the VPN's name). "Load VPN folder" in the menu picks up new,
+# changed and deleted files. Profiles made some other way are listed but never removed.
 #
 # Usage: archype-vpn sync     load the folder into NetworkManager
 #        archype-vpn toggle   disconnect, or connect the last used VPN (waybar click)
@@ -13,7 +13,10 @@ WG_DIR="$HOME/.config/vpn/wireguard"
 STATE_DIR="$HOME/.local/state/archype/vpn"
 MANAGED_DIR="$STATE_DIR/wireguard" # <name>: "<uuid> <sha256 of the .conf>" for each loaded file
 LAST_FILE="$STATE_DIR/last"        # uuid of the last connected VPN
+LOCK_FILE="$STATE_DIR/sync.lock"
 WAYBAR_SIGNAL=9                    # "signal" of custom/vpn in waybar's config
+LOAD_JOBS=8                        # files loaded at the same time
+PROGRESS_FROM=20                   # show a progress notification when loading more files than this
 
 notify() {
   notify-send --app-name=VPN "$@"
@@ -23,94 +26,246 @@ refresh_waybar() {
   pkill -RTMIN+$WAYBAR_SIGNAL -x waybar 2>/dev/null || true
 }
 
-# name<TAB>uuid of every WireGuard profile
-wireguard_profiles() {
-  nmcli -t -e no -f NAME,UUID,TYPE connection show | awk -F: '$3 == "wireguard" { print $1 "\t" $2 }'
+# uuid<TAB>active (yes/no)<TAB>name of every WireGuard profile, by name. NAME last: it may hold ':'.
+profiles() {
+  nmcli -t -e no -f UUID,TYPE,ACTIVE,NAME connection show |
+    while IFS=: read -r uuid type active name; do
+      [[ $type == wireguard ]] && printf '%s\t%s\t%s\n' "$uuid" "$active" "$name"
+    done | sort -t$'\t' -k3
 }
 
-# name<TAB>uuid<TAB>state of the active WireGuard profiles
+# uuid<TAB>state<TAB>name of the active WireGuard profiles
 active_profiles() {
-  nmcli -t -e no -f NAME,UUID,TYPE,STATE connection show --active |
-    awk -F: '$3 == "wireguard" { print $1 "\t" $2 "\t" $4 }'
+  nmcli -t -e no -f UUID,TYPE,STATE,NAME connection show --active |
+    while IFS=: read -r uuid type state name; do
+      [[ $type == wireguard ]] && printf '%s\t%s\t%s\n' "$uuid" "$state" "$name"
+    done
 }
 
-forget() {
-  local name="$1" uuid
-  read -r uuid _ <"$MANAGED_DIR/$name"
-  nmcli connection delete "$uuid" >/dev/null 2>&1 || true
-  rm -f "$MANAGED_DIR/$name"
+# "a, b, c and 4 more"
+name_list() {
+  local -a names=("$@")
+  local shown
+  shown=$(printf '%s, ' "${names[@]:0:5}")
+  shown=${shown%, }
+  ((${#names[@]} > 5)) && shown+=" and $((${#names[@]} - 5)) more"
+  echo "$shown"
+}
+
+# Fills the global array ADD_ARGS with `nmcli connection add` arguments for a wg-quick file. Fails
+# for anything it doesn't map (PostUp, Table, ...); those files go through `nmcli connection import`.
+build_add_args() {
+  local file="$1" name="$2" section key value item peer_key="" peer_attrs="" has_dns=""
+  local -a v4 v6 dns4 dns6 search peers
+  ADD_ARGS=(type wireguard con-name "$name" ifname "$name" connection.autoconnect no)
+
+  flush_peer() {
+    [[ -n $peer_key ]] && peers+=("$peer_key$peer_attrs")
+    peer_key="" peer_attrs=""
+  }
+
+  while IFS=$'\t' read -r section key value; do
+    case "$section/$key" in
+    peer/) flush_peer ;; # a new [Peer]
+    interface/) ;;
+    interface/privatekey) ADD_ARGS+=(wireguard.private-key "$value") ;;
+    interface/listenport) ADD_ARGS+=(wireguard.listen-port "$value") ;;
+    interface/fwmark) ADD_ARGS+=(wireguard.fwmark "$value") ;;
+    interface/mtu) ADD_ARGS+=(wireguard.mtu "$value") ;;
+    interface/address)
+      for item in ${value//,/ }; do
+        if [[ $item == *:* ]]; then v6+=("$item"); else v4+=("$item"); fi
+      done
+      ;;
+    interface/dns)
+      has_dns=1
+      for item in ${value//,/ }; do
+        if [[ $item == *:* ]]; then
+          dns6+=("$item")
+        elif [[ $item =~ ^[0-9.]+$ ]]; then
+          dns4+=("$item")
+        else
+          search+=("$item")
+        fi
+      done
+      ;;
+    peer/publickey) peer_key=$value ;;
+    peer/presharedkey) peer_attrs+=" preshared-key=$value" ;;
+    peer/allowedips) value=${value// /} && peer_attrs+=" allowed-ips=${value//,/;}" ;;
+    peer/endpoint) peer_attrs+=" endpoint=$value" ;;
+    peer/persistentkeepalive) peer_attrs+=" persistent-keepalive=$value" ;;
+    *) return 1 ;;
+    esac
+  done < <(awk '
+    { sub(/#.*/, ""); gsub(/^[ \t]+|[ \t]+$/, "") }
+    /^$/ { next }
+    /^\[.*\]$/ { section = tolower(substr($0, 2, length($0) - 2)); print section "\t\t"; next }
+    {
+      eq = index($0, "=")
+      if (!eq) { print "bad\tline\t"; next }
+      key = tolower(substr($0, 1, eq - 1)); value = substr($0, eq + 1)
+      gsub(/[ \t]/, "", key); gsub(/^[ \t]+/, "", value)
+      print section "\t" key "\t" value
+    }' "$file")
+  flush_peer
+
+  ((${#peers[@]})) || return 1
+  ADD_ARGS+=(wireguard.peers "$(IFS=,; echo "${peers[*]}")")
+  if ((${#v4[@]})); then
+    ADD_ARGS+=(ipv4.method manual ipv4.addresses "$(IFS=,; echo "${v4[*]}")")
+  else
+    ADD_ARGS+=(ipv4.method disabled)
+  fi
+  if ((${#v6[@]})); then
+    ADD_ARGS+=(ipv6.method manual ipv6.addresses "$(IFS=,; echo "${v6[*]}")")
+  else
+    ADD_ARGS+=(ipv6.method disabled)
+  fi
+  # With DNS in the file, use only the VPN's DNS while it's up ("~": for every domain, as import does)
+  if [[ -n $has_dns ]]; then
+    ((${#dns4[@]})) && ADD_ARGS+=(ipv4.dns "$(IFS=,; echo "${dns4[*]}")")
+    ((${#dns6[@]})) && ADD_ARGS+=(ipv6.dns "$(IFS=,; echo "${dns6[*]}")")
+    ADD_ARGS+=(ipv4.dns-search "$(IFS=,; echo "${search[*]:+${search[*]},}~")")
+    ADD_ARGS+=(ipv4.dns-priority -1 ipv6.dns-priority -1)
+  fi
+}
+
+# Loads one file (run in parallel by sync). Prints: ok<TAB>name<TAB>uuid, or fail<TAB>name<TAB>error
+load_one() {
+  local file="$1" name out uuid
+  name=$(basename "$file" .conf)
+  if build_add_args "$file" "$name"; then
+    out=$(nmcli connection add "${ADD_ARGS[@]}" 2>&1)
+  elif out=$(nmcli connection import type wireguard file "$file" 2>&1); then
+    # import turns the VPN on right away and on every boot
+    uuid=$(grep -oE '[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}' <<<"$out" | tail -1)
+    nmcli connection modify "$uuid" connection.autoconnect no >/dev/null 2>&1
+    grep -qiE '^\s*DNS\s*=' "$file" &&
+      nmcli connection modify "$uuid" ipv4.dns-priority -1 ipv6.dns-priority -1 >/dev/null 2>&1
+    nmcli connection down "$uuid" >/dev/null 2>&1
+  fi
+  uuid=$(grep -oE '[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}' <<<"$out" | tail -1)
+  if [[ -n $uuid ]]; then
+    printf 'ok\t%s\t%s\n' "$name" "$uuid"
+  else
+    printf 'fail\t%s\t%s\n' "$name" "$(tr '\n' ' ' <<<"$out")"
+  fi
 }
 
 sync() {
   mkdir -p "$MANAGED_DIR"
-  local -A present
-  local file name sum uuid old_uuid old_sum was_active out
-  local -a bad_names
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    notify -u low "VPN folder is already loading"
+    return
+  fi
 
   if [[ -d $WG_DIR && -n $(find -L "$WG_DIR" -maxdepth 0 -perm /077) ]]; then
     notify -u critical "VPN folder is readable by other users" \
       "It holds private keys. Fix it with: chmod 700 $WG_DIR"
   fi
 
+  local -A exists was_active sum_of old_uuid old_sum
+  local -a files bad_names to_load to_delete added updated removed failed reconnect
+  local uuid active name sum file status result total done id
+
+  while IFS=$'\t' read -r uuid active _; do
+    exists[$uuid]=1
+    [[ $active == yes ]] && was_active[$uuid]=1
+  done < <(profiles)
+
   shopt -s nullglob
-  for file in "$WG_DIR"/*.conf; do
-    name=$(basename "$file" .conf)
+  for file in "$MANAGED_DIR"/*; do
+    read -r "old_uuid[${file##*/}]" "old_sum[${file##*/}]" <"$file"
+  done
+  files=("$WG_DIR"/*.conf)
+  if ((${#files[@]})); then
+    while read -r sum file; do
+      name=${file##*/} && sum_of[${name%.conf}]=$sum
+    done < <(sha256sum -- "${files[@]}")
+  fi
+
+  for file in "${files[@]}"; do
+    name=${file##*/} && name=${name%.conf}
     # NetworkManager uses the name as the network interface name
     if [[ ! $name =~ ^[A-Za-z0-9_-]{1,15}$ ]]; then
       bad_names+=("$name.conf")
       continue
     fi
-    present[$name]=1
-    sum=$(sha256sum "$file" | cut -d' ' -f1)
-
-    old_uuid="" old_sum=""
-    [[ -f $MANAGED_DIR/$name ]] && read -r old_uuid old_sum <"$MANAGED_DIR/$name"
-    # Still loaded and unchanged
-    if [[ $sum == "$old_sum" ]] && nmcli -t connection show "$old_uuid" >/dev/null 2>&1; then
-      continue
-    fi
-
-    was_active=""
-    if [[ -n $old_uuid ]]; then
-      active_profiles | cut -f2 | grep -qx "$old_uuid" && was_active=1
-      forget "$name"
-    fi
-
-    if ! out=$(nmcli connection import type wireguard file "$file" 2>&1); then
-      notify -u critical "VPN $name could not be loaded" "$out"
-      continue
-    fi
-    uuid=$(grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' <<<"$out" | tail -1)
-    echo "$uuid $sum" >"$MANAGED_DIR/$name"
-
-    # Only on when asked, not at every boot. With DNS in the file, use only the VPN's DNS while it's up.
-    nmcli connection modify "$uuid" connection.autoconnect no
-    if grep -qiE '^\s*DNS\s*=' "$file"; then
-      nmcli connection modify "$uuid" ipv4.dns-priority -1 ipv6.dns-priority -1
-    fi
-    # import brings the VPN up right away; keep the state it had
-    if [[ -n $was_active ]]; then
-      nmcli connection up "$uuid" >/dev/null 2>&1 || true
+    uuid=${old_uuid[$name]}
+    if [[ -n $uuid && ${exists[$uuid]} ]]; then
+      [[ ${old_sum[$name]} == "${sum_of[$name]}" ]] && continue
+      to_delete+=("$uuid")
+      updated+=("$name")
+      [[ ${was_active[$uuid]} ]] && reconnect+=("$name")
     else
-      nmcli connection down "$uuid" >/dev/null 2>&1 || true
+      added+=("$name")
     fi
+    to_load+=("$file")
   done
 
   # Files that are gone
-  for file in "$MANAGED_DIR"/*; do
-    name=$(basename "$file")
-    [[ -n ${present[$name]} ]] || forget "$name"
+  for name in "${!old_uuid[@]}"; do
+    [[ -n ${sum_of[$name]} ]] && continue
+    uuid=${old_uuid[$name]}
+    [[ ${exists[$uuid]} ]] && to_delete+=("$uuid") && removed+=("$name")
+    rm -f "$MANAGED_DIR/$name"
   done
 
-  if ((${#bad_names[@]})); then
-    notify -u critical "VPN files skipped" \
-      "$(printf '%s\n' "${bad_names[@]}")Rename them to at most 15 letters, digits, - or _ (plus .conf)."
+  total=${#to_load[@]}
+  if ((total > PROGRESS_FROM)); then
+    id=$(notify -p -u low "Loading VPNs" "0/$total")
   fi
+
+  # One call for all of them
+  ((${#to_delete[@]})) && nmcli connection delete "${to_delete[@]}" >/dev/null 2>&1
+
+  done=0
+  local -A loaded
+  while IFS=$'\t' read -r status name result; do
+    if [[ $status == ok ]]; then
+      echo "$result ${sum_of[$name]}" >"$MANAGED_DIR/$name"
+      loaded[$name]=$result
+    else
+      rm -f "$MANAGED_DIR/$name"
+      failed+=("$name: $result")
+    fi
+    done=$((done + 1))
+    if [[ -n $id ]] && ((done % 20 == 0)); then
+      notify -r "$id" -u low "Loading VPNs" "$done/$total"
+    fi
+  done < <(((total)) && printf '%s\0' "${to_load[@]}" |
+    xargs -0 -n 1 -P "$LOAD_JOBS" "${BASH_SOURCE[0]}" _load)
+
+  for name in "${reconnect[@]}"; do
+    [[ -n ${loaded[$name]} ]] && nmcli connection up "${loaded[$name]}" >/dev/null 2>&1
+  done
+
+  # Summary
+  local body=""
+  local -a added_ok=() updated_ok=()
+  for name in "${added[@]}"; do [[ -n ${loaded[$name]} ]] && added_ok+=("$name"); done
+  for name in "${updated[@]}"; do [[ -n ${loaded[$name]} ]] && updated_ok+=("$name"); done
+  ((${#added_ok[@]})) && body+="Added ${#added_ok[@]}: $(name_list "${added_ok[@]}")"$'\n'
+  ((${#updated_ok[@]})) && body+="Updated ${#updated_ok[@]}: $(name_list "${updated_ok[@]}")"$'\n'
+  ((${#removed[@]})) && body+="Removed ${#removed[@]}: $(name_list "${removed[@]}")"$'\n'
+  local -a replace=()
+  [[ -n $id ]] && replace=(-r "$id")
+  if ((${#failed[@]} + ${#bad_names[@]})); then
+    body+=$(printf '%s\n' "${failed[@]:0:5}")
+    ((${#bad_names[@]})) && body+=$'\n'"Skipped (rename to at most 15 letters, digits, - or _): $(name_list "${bad_names[@]}")"
+    notify "${replace[@]}" -u critical "VPN folder loaded with errors" "$body"
+  elif [[ -n $body ]]; then
+    notify "${replace[@]}" "VPN folder loaded" "${body%$'\n'}"
+  else
+    notify "${replace[@]}" -u low "VPN folder: no changes" "${#files[@]} VPNs"
+  fi
+  refresh_waybar
 }
 
 disconnect_all() {
   local uuid
-  for uuid in $(active_profiles | cut -f2); do
+  for uuid in $(active_profiles | cut -f1); do
     nmcli connection down "$uuid" >/dev/null 2>&1 || true
   done
 }
@@ -131,7 +286,7 @@ connect() {
 
 disconnect() {
   local names
-  names=$(active_profiles | cut -f1 | paste -sd ' ')
+  names=$(active_profiles | cut -f3 | paste -sd ' ')
   disconnect_all
   notify -u low "VPN disconnected" "$names"
   refresh_waybar
@@ -143,25 +298,24 @@ open_folder() {
 }
 
 toggle() {
-  sync
   if [[ -n $(active_profiles) ]]; then
     disconnect
     return
   fi
 
-  local last="" name uuid
-  local -a profiles
+  local last="" uuid name
+  local -a all
   [[ -f $LAST_FILE ]] && last=$(<"$LAST_FILE")
-  mapfile -t profiles < <(wireguard_profiles)
-  for line in "${profiles[@]}"; do
-    IFS=$'\t' read -r name uuid <<<"$line"
+  mapfile -t all < <(profiles)
+  for line in "${all[@]}"; do
+    IFS=$'\t' read -r uuid _ name <<<"$line"
     if [[ $uuid == "$last" ]]; then
       connect "$name" "$uuid"
       return
     fi
   done
-  if ((${#profiles[@]} == 1)); then
-    IFS=$'\t' read -r name uuid <<<"${profiles[0]}"
+  if ((${#all[@]} == 1)); then
+    IFS=$'\t' read -r uuid _ name <<<"${all[0]}"
     connect "$name" "$uuid"
   else
     menu
@@ -169,39 +323,36 @@ toggle() {
 }
 
 menu() {
-  sync
   local -A uuid_of
-  local -a entries
-  local name uuid active_uuids choice
-  active_uuids=$(active_profiles | cut -f2)
+  local -a connected others
+  local uuid active name choice
 
-  while IFS=$'\t' read -r name uuid; do
-    [[ -n $name ]] || continue
-    if grep -qx "$uuid" <<<"$active_uuids"; then
-      entries+=("$name (connected)")
+  while IFS=$'\t' read -r uuid active name; do
+    if [[ $active == yes ]]; then
+      connected+=("$name (connected)")
       uuid_of["$name (connected)"]=$uuid
     else
-      entries+=("$name")
+      others+=("$name")
       uuid_of[$name]=$uuid
     fi
-  done < <(wireguard_profiles)
-  [[ -n $active_uuids ]] && entries+=("Disconnect")
-  entries+=("Open VPN folder")
+  done < <(profiles)
 
-  choice=$(printf '%s\n' "${entries[@]}" |
-    vicinae dmenu -n "VPN" -p "VPN..." --no-quick-look) || exit 0
+  choice=$(
+    {
+      ((${#connected[@]})) && printf '%s\n' "${connected[@]}" "Disconnect"
+      printf '%s\n' "Load VPN folder" "Open VPN folder"
+      ((${#others[@]})) && printf '%s\n' "${others[@]}"
+    } | vicinae dmenu -n "VPN" -p "VPN..." --no-quick-look
+  ) || exit 0
 
   case $choice in
   "Disconnect") disconnect ;;
+  "Load VPN folder") sync ;;
   "Open VPN folder") open_folder ;;
+  *" (connected)") disconnect ;;
   *)
     uuid=${uuid_of[$choice]}
-    [[ -n $uuid ]] || exit 0
-    if grep -qx "$uuid" <<<"$active_uuids"; then
-      disconnect
-    else
-      connect "${choice% (connected)}" "$uuid"
-    fi
+    [[ -n $uuid ]] && connect "$choice" "$uuid"
     ;;
   esac
 }
@@ -210,12 +361,15 @@ status() {
   local active name state
   active=$(active_profiles | head -1)
   if [[ -z $active ]]; then
-    # No VPNs at all: no icon on the bar
-    [[ -z $(wireguard_profiles) ]] && { echo '{"text": ""}'; return; }
+    # No VPNs loaded: no icon on the bar. The managed list avoids listing every profile each time.
+    if [[ -z $(ls -A "$MANAGED_DIR" 2>/dev/null) && -z $(profiles) ]]; then
+      echo '{"text": ""}'
+      return
+    fi
     jq -cn '{text: "󰖂", class: "disconnected", tooltip: "VPN off\n\nClick: connect the last one\nRight-click: choose"}'
     return
   fi
-  IFS=$'\t' read -r name _ state <<<"$active"
+  IFS=$'\t' read -r _ state name <<<"$active"
   if [[ $state == activated ]]; then
     jq -cn --arg name "$name" '{text: "󰖂", class: "connected", tooltip: "VPN: \($name)\n\nClick: disconnect\nRight-click: choose"}'
   else
@@ -228,8 +382,9 @@ sync) sync ;;
 toggle) toggle ;;
 menu) menu ;;
 status) status ;;
+_load) load_one "$2" ;;
 *)
-  sed -n '3,11s/^# \?//p' "$0"
+  sed -n '3,10s/^# \?//p' "$0"
   exit 1
   ;;
 esac

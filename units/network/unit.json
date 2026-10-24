@@ -1,0 +1,5 @@
+{
+  "name": "Network",
+  "description": "VPNs: WireGuard profiles from ~/.config/vpn, on the bar and in the launcher.",
+  "version": "1.0.0"
+}

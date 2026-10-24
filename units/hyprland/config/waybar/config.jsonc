@@ -9,6 +9,7 @@
   "modules-right": [
     "tray",
     "bluetooth",
+    "custom/vpn",
     "network",
     "pulseaudio",
     "battery"
@@ -67,6 +68,15 @@
     "interval": 3,
     "spacing": 1,
     "on-click": "archype-launch-tui nmtui nmtui"
+  },
+  // Shown once a VPN exists (network unit, archype-vpn). archype-vpn sends the signal on changes.
+  "custom/vpn": {
+    "exec": "archype-vpn status",
+    "return-type": "json",
+    "interval": 10,
+    "signal": 9,
+    "on-click": "archype-vpn toggle",
+    "on-click-right": "archype-vpn menu"
   },
   "battery": {
     "format": "{capacity}% {icon}",

@@ -59,6 +59,7 @@
 #bluetooth,
 #pulseaudio,
 #custom-logo,
+#custom-vpn,
 #custom-update {
   min-width: 12px;
   margin: 0 7.5px;
@@ -66,6 +67,14 @@
 
 tooltip {
   padding: 2px;
+}
+
+#custom-vpn.disconnected {
+  opacity: 0.4;
+}
+
+#custom-vpn.connecting {
+  opacity: 0.7;
 }
 
 #custom-update {

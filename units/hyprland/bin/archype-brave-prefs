@@ -3,6 +3,16 @@
 # Applies Archype's Brave settings that have no policy (~/.config/archype/hyprland/brave-prefs.json, same
 # layout as Brave's Preferences file) to the Default profile. A setting is only written when its value in
 # Archype is new or changed since the last run, so changes made in Brave's settings stay.
+#
+# Also creates the containers listed in ~/.config/archype/brave-containers (optional; not part of Archype),
+# one per line: name [color] [icon]
+#   name   no spaces, as used in ~/.config/archype/links
+#   color  red (default), orange, yellow, green, teal, blue, purple, pink, or #rrggbb
+#   icon   personal (default), work, shopping, social, events, banking, star, travel, school, private,
+#          messaging
+# A container is matched by name: an existing one keeps its id (and so its cookies and logins) and only
+# gets its color and icon updated. Containers missing from the file are never deleted.
+#
 # Brave rewrites Preferences when it exits, so a running Brave is closed first and reopened with its tabs
 # on the workspace it was on. Without Hyprland to reopen it (ssh, TTY), a running Brave is left alone.
 
@@ -12,25 +22,57 @@ umask 077
 PROFILE="$HOME/.config/BraveSoftware/Brave-Browser/Default"
 PREFS="$PROFILE/Preferences"
 DEFAULTS="$HOME/.config/archype/hyprland/brave-prefs.json"
+CONTAINERS="$HOME/.config/archype/brave-containers"
 APPLIED="$HOME/.local/state/archype/brave-prefs.json" # Archype's values from the last run
 CLOSE_TIMEOUT=20                                       # seconds to wait for Brave to exit
 
-cmp -s "$DEFAULTS" "$APPLIED" && exit 0
+# Brave's container colors (the ones its settings offer) and icons, in the order of its icon enum
+declare -A COLORS=([red]=ff3c36 [orange]=f45202 [yellow]=b08c00 [green]=2fab5f [teal]=35a0b4 [blue]=488cff
+  [purple]=9973f8 [pink]=ff1593)
+ICONS=(personal work shopping social events banking star travel school private messaging)
 
-mkdir -p "$(dirname "$APPLIED")"
+# [{name, icon, background_color}] from the containers file. Brave stores the color as a signed 32-bit
+# ARGB number, fully opaque.
+read_containers() {
+  local name rest token color icon i
+  [[ -f $CONTAINERS ]] || { echo '[]'; return; }
+  while read -r name rest; do
+    [[ -z $name || $name == \#* ]] && continue
+    color=${COLORS[red]} icon=0
+    for token in $rest; do
+      if [[ -n ${COLORS[$token]} ]]; then
+        color=${COLORS[$token]}
+      elif [[ $token =~ ^#[0-9a-fA-F]{6}$ ]]; then
+        color=${token:1}
+      else
+        for i in "${!ICONS[@]}"; do
+          [[ ${ICONS[i]} == "$token" ]] && icon=$i && break
+        done
+        [[ ${ICONS[icon]} == "$token" ]] || echo "brave-containers: unknown color or icon '$token' ($name)" >&2
+      fi
+    done
+    jq -n --arg name "$name" --argjson icon "$icon" --argjson color $((0x$color - 0x1000000)) \
+      --arg id "$(cat /proc/sys/kernel/random/uuid)" '{name: $name, icon: $icon, background_color: $color, id: $id}'
+  done <"$CONTAINERS" | jq -s .
+}
+
+mkdir -p "$(dirname "$APPLIED")" "$PROFILE"
 [[ -s $APPLIED ]] || echo '{}' >"$APPLIED"
+[[ -s $PREFS ]] || echo '{}' >"$PREFS"
 
 # [{path, value}] for each setting that is new or changed in Archype since the last run
 changes=$(jq -n --slurpfile new "$DEFAULTS" --slurpfile old "$APPLIED" '
   [$new[0] | paths(type != "object") as $path | getpath($path) as $value
    | select(($old[0] | getpath($path)) != $value) | {path: $path, value: $value}]')
+containers=$(read_containers)
 
-mkdir -p "$PROFILE"
-[[ -s $PREFS ]] || echo '{}' >"$PREFS"
-
-# The profile already has every value: nothing to write, no need to close Brave
-if jq -e --argjson changes "$changes" '. as $prefs | all($changes[]; . as $c | $c.value == ($prefs | getpath($c.path)))' \
-  "$PREFS" >/dev/null; then
+# The profile already has every value and container: nothing to write, no need to close Brave
+if jq -e --argjson changes "$changes" --argjson containers "$containers" '
+  . as $prefs | (.brave.containers.list // []) as $list
+  | all($changes[]; . as $c | $c.value == ($prefs | getpath($c.path)))
+    and all($containers[]; . as $c
+      | any($list[]; .name == $c.name and .icon == $c.icon and .background_color == $c.background_color))
+' "$PREFS" >/dev/null; then
   cp "$DEFAULTS" "$APPLIED"
   exit 0
 fi
@@ -57,8 +99,21 @@ if pgrep -x brave >/dev/null; then
   fi
 fi
 
-jq --argjson changes "$changes" 'reduce $changes[] as $c (.; setpath($c.path; $c.value))' \
-  "$PREFS" >"$PREFS.archype"
+# Settings, then containers: a new one is added with its fresh id, an existing one (same name) gets the
+# new color and icon, also in the "used" copy Brave keeps of containers that have tabs.
+jq --argjson changes "$changes" --argjson containers "$containers" '
+  reduce $changes[] as $c (.; setpath($c.path; $c.value))
+  | reduce $containers[] as $c (.;
+      ((.brave.containers.list // []) | map(.name) | index($c.name)) as $i
+      | if $i == null then
+          .brave.containers.list += [$c]
+        else
+          .brave.containers.list[$i].id as $id
+          | ($c | del(.id)) as $fields
+          | .brave.containers.list[$i] += $fields
+          | if .brave.containers.used[$id] then .brave.containers.used[$id] += $fields else . end
+        end)
+' "$PREFS" >"$PREFS.archype"
 mv "$PREFS.archype" "$PREFS"
 cp "$DEFAULTS" "$APPLIED"
 

@@ -1,0 +1,15 @@
+{
+  "brave": {
+    "brave_ads": { "sponsored": { "enabled": false } },
+    "containers": { "enabled": true },
+    "enable_window_closing_confirm": false,
+    "location_bar_is_wide": false,
+    "new_tab_page": { "shows_options": 2 },
+    "shields": { "advanced_view_enabled": true },
+    "speedreader": { "feature_enabled": true },
+    "tabs": { "hover_mode": 1, "scrollable_horizontal_tab_strip": false },
+    "web_view_rounded_corners": false
+  },
+  "browser": { "custom_chrome_frame": false },
+  "omnibox": { "prevent_url_elisions": true }
+}

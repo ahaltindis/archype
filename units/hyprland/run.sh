@@ -40,13 +40,19 @@ if [[ -f $chromium_theme ]]; then
   fi
 fi
 
-# Default apps for file types, and foot as the terminal for launchers (xdg-terminal-exec, vicinae).
-# System-wide files: ~/.config/mimeapps.list and ~/.config/xdg-terminals.list still win over them.
 install_system_file() {
   if ! cmp -s "$1" "$2"; then
     sudo install -Dm644 "$1" "$2"
   fi
 }
+
+# Brave: settings that have a policy are locked by it (greyed out in Brave's settings); the rest are
+# written into the profile while Brave is closed, as defaults the user can still change
+install_system_file "$UNIT_PATH/default/brave-policy.json" /etc/brave/policies/managed/archype.json
+archype-brave-prefs
+
+# Default apps for file types, and foot as the terminal for launchers (xdg-terminal-exec, vicinae).
+# System-wide files: ~/.config/mimeapps.list and ~/.config/xdg-terminals.list still win over them.
 install_system_file "$UNIT_PATH/xdg/mimeapps.list" /etc/xdg/mimeapps.list
 install_system_file "$UNIT_PATH/xdg/xdg-terminals.list" /etc/xdg/xdg-terminals.list
 for entry in "$UNIT_PATH"/xdg/applications/*.desktop; do

@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Applies Archype's Brave settings that have no policy (~/.config/archype/hyprland/brave-prefs.json, same
+# layout as Brave's Preferences file) to the Default profile. A setting is only written when its value in
+# Archype is new or changed since the last run, so changes made in Brave's settings stay.
+# Brave rewrites Preferences when it exits, so a running Brave is closed first and reopened with its tabs
+# on the workspace it was on. Without Hyprland to reopen it (ssh, TTY), a running Brave is left alone.
+
+set -e
+umask 077
+
+PROFILE="$HOME/.config/BraveSoftware/Brave-Browser/Default"
+PREFS="$PROFILE/Preferences"
+DEFAULTS="$HOME/.config/archype/hyprland/brave-prefs.json"
+APPLIED="$HOME/.local/state/archype/brave-prefs.json" # Archype's values from the last run
+CLOSE_TIMEOUT=20                                       # seconds to wait for Brave to exit
+
+cmp -s "$DEFAULTS" "$APPLIED" && exit 0
+
+mkdir -p "$(dirname "$APPLIED")"
+[[ -s $APPLIED ]] || echo '{}' >"$APPLIED"
+
+# [{path, value}] for each setting that is new or changed in Archype since the last run
+changes=$(jq -n --slurpfile new "$DEFAULTS" --slurpfile old "$APPLIED" '
+  [$new[0] | paths(type != "object") as $path | getpath($path) as $value
+   | select(($old[0] | getpath($path)) != $value) | {path: $path, value: $value}]')
+
+mkdir -p "$PROFILE"
+[[ -s $PREFS ]] || echo '{}' >"$PREFS"
+
+# The profile already has every value: nothing to write, no need to close Brave
+if jq -e --argjson changes "$changes" '. as $prefs | all($changes[]; . as $c | $c.value == ($prefs | getpath($c.path)))' \
+  "$PREFS" >/dev/null; then
+  cp "$DEFAULTS" "$APPLIED"
+  exit 0
+fi
+
+workspace=""
+if pgrep -x brave >/dev/null; then
+  # Workspace of the most recently focused Brave window, preferring one that isn't hidden (special:...)
+  workspace=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.class == "brave-browser")]
+    | min_by([(.workspace.name | startswith("special:")), .focusHistoryID]) | .workspace.name // empty') || true
+  if [[ -z $workspace ]]; then
+    echo "Brave is running: close it, then run archype-brave-prefs to apply Archype's Brave settings"
+    exit 0
+  fi
+
+  echo "Restarting Brave to apply Archype's Brave settings"
+  kill -TERM "$(pgrep -o -x brave)"
+  for ((i = 0; i < CLOSE_TIMEOUT * 10; i++)); do
+    pgrep -x brave >/dev/null || break
+    sleep 0.1
+  done
+  if pgrep -x brave >/dev/null; then
+    echo "Brave didn't exit: close it, then run archype-brave-prefs to apply Archype's Brave settings"
+    exit 0
+  fi
+fi
+
+jq --argjson changes "$changes" 'reduce $changes[] as $c (.; setpath($c.path; $c.value))' \
+  "$PREFS" >"$PREFS.archype"
+mv "$PREFS.archype" "$PREFS"
+cp "$DEFAULTS" "$APPLIED"
+
+if [[ -n $workspace ]]; then
+  hyprctl dispatch "hl.dsp.exec_cmd(\"uwsm app -- brave --restore-last-session\", { workspace = \"$workspace silent\" })" >/dev/null
+fi

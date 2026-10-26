@@ -49,9 +49,8 @@ Things learned the hard way. Each one cost a debugging session.
 
 ## Apps
 
-- **Brave colors** come from the managed policy `/etc/brave/policies/managed/color.json` with
-  `BrowserThemeColor` (root-only, so it's written by the installer). Brave ignores
-  `BrowserColorScheme`. A blue seed turns the frame light; black gives a dark frame.
+- **Brave colors** come from the managed policy `/etc/brave/policies/managed/color.json` with `BrowserThemeColor` (root-only, so it's written by the installer). Brave ignores `BrowserColorScheme`. A blue seed turns the frame light; black gives a dark frame.
+- **Brave settings**: anything with a policy goes in `/etc/brave/policies/managed/archype.json` (locked in Brave's settings); the rest is written into `Default/Preferences` by `archype-brave-prefs`. Brave rewrites that file on exit, so the script stops a running Brave first (SIGTERM, a clean exit) and reopens it with `--restore-last-session` (without it the tabs are lost unless "Continue where you left off" is set). `hl.dsp.exec_cmd(cmd, { workspace = "2 silent" })` rules work through `uwsm app`. Chromium drops prefs that equal the default, so a pref missing from the file isn't proof it was never changed. A `Preferences` holding only those keys, written before Brave's first start, is kept. brave://flags entries become `--disable-features=` / `--enable-features=` in `brave-flags.conf` (feature names: `strings /opt/brave-bin/brave | grep kBrave`, minus the `k`); Chromium only uses the last `--disable-features` on the command line.
 - vicinae: config is `~/.config/vicinae/settings.json`; themes are TOML in
   `~/.local/share/vicinae/themes/` (id = file name); the first-start screen is skipped by writing
   `~/.local/state/vicinae/onboarding.json` with `{"version":1}`. Without `=`, the calculator only runs

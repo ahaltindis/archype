@@ -10,6 +10,9 @@ prepend_keymap = [
   # Download remote (sftp) files so they can be previewed; Enter downloads and opens
   { on = "F", run = "shell -- ya emit download %S", desc = "Download selected files" },
 
+  # Drop to shell
+  { on = "!", run  = 'shell "$SHELL" --block', desc = "Open $SHELL here" },
+
   # Execute Script
   {
     on = [ "e", "l" ],

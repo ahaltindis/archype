@@ -1,5 +1,15 @@
 return {
   { "ellisonleao/gruvbox.nvim" },
+  -- Make nvim-lint always lint the file's folder.
+  {
+    "mfussenegger/nvim-lint",
+    opts = function()
+      local gl = require("lint").linters.golangcilint
+      gl.args[#gl.args] = function()
+        return vim.fn.expand("%:p:h")
+      end
+    end,
+  },
   {
     "LazyVim/LazyVim",
     opts = {

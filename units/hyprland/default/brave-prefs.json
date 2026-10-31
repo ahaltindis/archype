@@ -5,6 +5,7 @@
     "enable_window_closing_confirm": false,
     "location_bar_is_wide": false,
     "new_tab_page": { "shows_options": 2 },
+    "omnibox": { "history_suggestions_enabled": false },
     "shields": { "advanced_view_enabled": true },
     "speedreader": { "feature_enabled": true },
     "tabs": { "hover_mode": 1, "scrollable_horizontal_tab_strip": false },

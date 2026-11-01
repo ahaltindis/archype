@@ -1,0 +1,7 @@
+libvirt                       # VM manager daemon and virsh
+qemu-desktop                  # QEMU/KVM with display, audio and USB for desktop guests
+dnsmasq                       # DHCP/DNS for libvirt's default NAT network
+virt-install                  # creates VMs from the command line (archype-vm create)
+virt-viewer                   # VM console, needed during the Windows install
+swtpm                         # virtual TPM, required by Windows 11
+edk2-ovmf                     # UEFI firmware with Secure Boot, required by Windows 11

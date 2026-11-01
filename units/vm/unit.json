@@ -1,0 +1,5 @@
+{
+  "name": "Virtual Machines",
+  "description": "libvirt VMs managed with archype-vm, for a Windows VM. Optional: install with archype-unit-install vm.",
+  "version": "1.0.0"
+}

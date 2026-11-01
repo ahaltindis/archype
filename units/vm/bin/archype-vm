@@ -131,8 +131,9 @@ create() {
   rm -f "$unattend_iso"
 
   # Windows 11 needs UEFI with Secure Boot and a TPM 2.0. Arch's OVMF has no Microsoft keys enrolled,
-  # which Windows accepts. --osinfo adds the Hyper-V enlightenments, the clock setup and the guest
-  # agent channel. The Windows ISO boots first; the disk takes over once Windows is installed.
+  # which Windows accepts. --osinfo adds the Hyper-V enlightenments and the clock setup, but not the
+  # channel for the QEMU guest agent (installed in Windows by firstlogon.ps1). The Windows ISO boots
+  # first; the disk takes over once Windows is installed.
   # virt-install creates the (sparse) disk in the pool and prints the XML; it defines nothing.
   local xml
   xml=$(virt-install \
@@ -149,6 +150,7 @@ create() {
     --disk "path=$windows_copy,device=cdrom,bus=sata,readonly=on,boot.order=1" \
     --disk "path=$virtio_copy,device=cdrom,bus=sata,readonly=on" \
     --disk "path=$unattend_copy,device=cdrom,bus=sata,readonly=on" \
+    --channel unix,target.type=virtio,target.name=org.qemu.guest_agent.0 \
     --network network=default,model=virtio \
     --graphics spice \
     --video virtio \

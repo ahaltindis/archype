@@ -1,0 +1,4 @@
+# Archype: running VMs get a clean shutdown when the computer shuts down; none start at boot
+ON_BOOT=ignore
+ON_SHUTDOWN=shutdown
+SHUTDOWN_TIMEOUT=120

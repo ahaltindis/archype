@@ -76,7 +76,7 @@ iso_ui_languages() {
     awk '/^\[/ { list = /^\[Available UI Languages\]/; next } list && /=/ { split($1, l, "-"); print l[1] "-" toupper(l[2]) }'
 }
 
-# A small CD with autounattend.xml and firstlogon.ps1, which Windows Setup finds by itself
+# A small CD with autounattend.xml and the PowerShell scripts it runs (firstlogon.ps1, tweaks.ps1)
 build_unattend_iso() {
   local name="$1" ui_language="$2" out="$3" dir
   dir=$(mktemp -d)
@@ -84,7 +84,7 @@ build_unattend_iso() {
   local computer=${name//_/-}
   sed -e "s/@COMPUTERNAME@/${computer:0:15}/" -e "s/@UILANGUAGE@/$ui_language/" \
     "$WINDOWS_FILES/autounattend.xml" >"$dir/autounattend.xml"
-  cp "$WINDOWS_FILES/firstlogon.ps1" "$dir/"
+  cp "$WINDOWS_FILES"/*.ps1 "$dir/"
   xorriso -as mkisofs -quiet -J -joliet-long -r -V UNATTEND -o "$out" "$dir"
   rm -rf "$dir"
 }

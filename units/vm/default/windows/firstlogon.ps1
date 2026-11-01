@@ -34,5 +34,8 @@ if (Get-Service -Name QEMU-GA -ErrorAction SilentlyContinue) {
   Write-Output 'QEMU guest agent service: missing'
 }
 
+# Archype's Windows settings, from the same CD
+& (Join-Path $PSScriptRoot 'tweaks.ps1')
+
 Stop-Transcript
 Stop-Computer -Force

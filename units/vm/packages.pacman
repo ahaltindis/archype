@@ -5,3 +5,4 @@ virt-install                  # creates VMs from the command line (archype-vm cr
 virt-viewer                   # VM console, needed during the Windows install
 swtpm                         # virtual TPM, required by Windows 11
 edk2-ovmf                     # UEFI firmware with Secure Boot, required by Windows 11
+libisoburn                    # xorriso: builds the small answer-file CD for unattended installs

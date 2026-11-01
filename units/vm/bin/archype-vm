@@ -2,9 +2,11 @@
 
 # Windows VMs on libvirt (qemu:///system). Disks, NVRAM and TPM state are managed by libvirt; disk
 # images and the install ISOs live in /var/lib/libvirt/images (libvirt storage pool "images").
+# create installs Windows unattended (default/windows/autounattend.xml): user archype, password archype.
 #
 # Usage: archype-vm create <name> --iso <windows.iso> --virtio <virtio-win.iso>
 #                          [--memory <GB>] [--cpus <n>] [--disk <GB>]
+#        archype-vm finish <name>           wait for the install to end, remove the install CDs
 #        archype-vm start <name>
 #        archype-vm stop <name> [--force]   clean shutdown (waits); --force pulls the plug
 #        archype-vm status <name>
@@ -19,6 +21,8 @@ export LIBVIRT_DEFAULT_URI=qemu:///system
 IMAGES=/var/lib/libvirt/images
 POOL=images
 STOP_TIMEOUT=120 # seconds a clean shutdown may take before stop gives up
+BOOT_KEY_SECONDS=20 # how long create presses Enter for "Press any key to boot from CD or DVD"
+WINDOWS_FILES="$(dirname "$(readlink -f "$0")")/../default/windows"
 
 die() {
   echo "archype-vm: $*" >&2
@@ -55,13 +59,27 @@ ensure_pool() {
   virsh pool-refresh "$POOL" >/dev/null
 }
 
-# The VM's files in the pool: disk and ISO copies, whichever are there
+# The VM's files in the pool, whichever are there: install ISO copies, and the disk with --disk
 vm_volumes() {
   local volume
-  for volume in "$1.qcow2" "$1-windows.iso" "$1-virtio-win.iso"; do
+  local -a names=("$1-windows.iso" "$1-virtio-win.iso" "$1-unattend.iso")
+  [[ $2 == --disk ]] && names+=("$1.qcow2")
+  for volume in "${names[@]}"; do
     virsh vol-info --pool "$POOL" "$volume" &>/dev/null && echo "$volume"
   done
   return 0
+}
+
+# A small CD with autounattend.xml and firstlogon.ps1, which Windows Setup finds by itself
+build_unattend_iso() {
+  local name="$1" out="$2" dir
+  dir=$(mktemp -d)
+  # Windows computer names: up to 15 characters, no underscores
+  local computer=${name//_/-}
+  sed "s/@COMPUTERNAME@/${computer:0:15}/" "$WINDOWS_FILES/autounattend.xml" >"$dir/autounattend.xml"
+  cp "$WINDOWS_FILES/firstlogon.ps1" "$dir/"
+  xorriso -as mkisofs -quiet -J -joliet-long -r -V UNATTEND -o "$out" "$dir"
+  rm -rf "$dir"
 }
 
 create() {
@@ -88,11 +106,17 @@ create() {
   local disk_file="$IMAGES/$name.qcow2"
   local windows_copy="$IMAGES/$name-windows.iso"
   local virtio_copy="$IMAGES/$name-virtio-win.iso"
+  local unattend_copy="$IMAGES/$name-unattend.iso"
   ensure_pool
-  [[ -n $(vm_volumes "$name") ]] && die "files of an earlier '$name' are left in $IMAGES; 'archype-vm delete $name' removes them"
+  [[ -n $(vm_volumes "$name" --disk) ]] && die "files of an earlier '$name' are left in $IMAGES; 'archype-vm delete $name' removes them"
+  local unattend_iso
+  unattend_iso=$(mktemp --suffix=.iso)
+  build_unattend_iso "$name" "$unattend_iso"
   echo "Copying the ISOs to $IMAGES (QEMU can't read your home folder)..."
   sudo install -m644 "$iso" "$windows_copy"
   sudo install -m644 "$virtio" "$virtio_copy"
+  sudo install -m644 "$unattend_iso" "$unattend_copy"
+  rm -f "$unattend_iso"
 
   # Windows 11 needs UEFI with Secure Boot and a TPM 2.0. Arch's OVMF has no Microsoft keys enrolled,
   # which Windows accepts. --osinfo adds the Hyper-V enlightenments, the clock setup and the guest
@@ -112,6 +136,7 @@ create() {
     --disk "path=$disk_file,size=$disk,format=qcow2,bus=virtio,cache=none,discard=unmap,boot.order=2" \
     --disk "path=$windows_copy,device=cdrom,bus=sata,readonly=on,boot.order=1" \
     --disk "path=$virtio_copy,device=cdrom,bus=sata,readonly=on" \
+    --disk "path=$unattend_copy,device=cdrom,bus=sata,readonly=on" \
     --network network=default,model=virtio \
     --graphics spice \
     --video virtio \
@@ -119,11 +144,54 @@ create() {
 
   virsh define /dev/stdin <<<"$xml" >/dev/null
 
-  # The viewer waits for the VM, so it's on screen for "Press any key to boot from CD or DVD"
-  echo "Starting $name. Press a key in the console when it asks to boot from CD or DVD."
+  # The console is only for watching; nothing needs a click
   setsid -f virt-viewer --connect "$LIBVIRT_DEFAULT_URI" --wait "$name" &>/dev/null
   sleep 1
   virsh start "$name" >/dev/null
+  # Answers "Press any key to boot from CD or DVD". Later presses land on loading screens. Windows
+  # Setup's own reboots get no key, so they boot from the disk as they should.
+  echo "Starting $name and pressing Enter for the CD boot prompt..."
+  local i
+  for ((i = 0; i < BOOT_KEY_SECONDS; i++)); do
+    virsh send-key "$name" KEY_ENTER &>/dev/null || true
+    sleep 1
+  done
+  finish "$name"
+}
+
+# Waits until firstlogon.ps1 shuts Windows down at the end of the install, then removes the install
+# CDs and their ISO copies, and starts Windows from its disk
+finish() {
+  check_exists "$1"
+  local -a cdroms
+  local device target
+  while read -r _ device target _; do
+    [[ $device == cdrom ]] && cdroms+=("$target")
+  done < <(virsh domblklist "$1" --details | tail -n +3)
+  if ((${#cdroms[@]} == 0)); then
+    echo "$1 has no install CDs left: nothing to finish"
+    return
+  fi
+
+  local started=$SECONDS
+  echo "Windows is installing in $1: 20-40 minutes, with a few reboots. It shuts down when done."
+  echo "Ctrl-C is safe: 'archype-vm finish $1' waits again."
+  while [[ $(state "$1") != "shut off" ]]; do
+    printf '\r  %d min' $(((SECONDS - started) / 60))
+    sleep 10
+  done
+  echo
+
+  for target in "${cdroms[@]}"; do
+    virsh detach-disk "$1" "$target" --config >/dev/null
+  done
+  ensure_pool
+  local volume
+  while read -r volume; do
+    virsh vol-delete --pool "$POOL" "$volume" >/dev/null
+  done < <(vm_volumes "$1")
+  virsh start "$1" >/dev/null
+  echo "$1 is installed and running. 'archype-vm console $1' shows it (user archype, password archype)."
 }
 
 start() {
@@ -177,7 +245,7 @@ delete() {
   check_name "$1"
   ensure_pool
   local -a volumes
-  mapfile -t volumes < <(vm_volumes "$1")
+  mapfile -t volumes < <(vm_volumes "$1" --disk)
   local answer
   if exists "$1"; then
     read -rp "Delete VM '$1' with its disk, NVRAM and TPM state? This can't be undone. [y/N] " answer
@@ -201,6 +269,7 @@ delete() {
 
 case $1 in
 create) create "${@:2}" ;;
+finish) finish "$2" ;;
 start) start "$2" ;;
 stop) stop "$2" "$3" ;;
 status) status "$2" ;;
@@ -208,7 +277,7 @@ list) virsh list --all ;;
 console) console "$2" ;;
 delete) delete "$2" ;;
 *)
-  sed -n '6,14s/^# \?//p' "$0"
+  sed -n '7,16s/^# \?//p' "$0"
   exit 1
   ;;
 esac

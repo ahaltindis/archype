@@ -37,11 +37,13 @@ Step 'Less telemetry and ads' {
 Step 'Remove preinstalled apps' {
   $apps = 'Clipchamp.Clipchamp', 'Microsoft.BingNews', 'Microsoft.BingSearch', 'Microsoft.BingWeather',
     'Microsoft.Copilot', 'Microsoft.GamingApp', 'Microsoft.GetHelp', 'Microsoft.Getstarted',
-    'Microsoft.MicrosoftOfficeHub', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.OutlookForWindows',
-    'Microsoft.PowerAutomateDesktop', 'Microsoft.Todos', 'Microsoft.Windows.DevHome',
-    'Microsoft.WindowsFeedbackHub', 'Microsoft.Xbox.TCUI', 'Microsoft.XboxGamingOverlay',
-    'Microsoft.XboxIdentityProvider', 'Microsoft.XboxSpeechToTextOverlay', 'Microsoft.YourPhone',
-    'Microsoft.ZuneMusic', 'MSTeams'
+    'Microsoft.MicrosoftOfficeHub', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.MicrosoftStickyNotes',
+    'Microsoft.OutlookForWindows', 'Microsoft.PowerAutomateDesktop', 'Microsoft.Todos',
+    'Microsoft.Windows.DevHome', 'Microsoft.WindowsAlarms', 'Microsoft.WindowsCamera',
+    'Microsoft.WindowsFeedbackHub', 'Microsoft.WindowsSoundRecorder', 'Microsoft.Xbox.TCUI',
+    'Microsoft.XboxGamingOverlay', 'Microsoft.XboxIdentityProvider', 'Microsoft.XboxSpeechToTextOverlay',
+    'Microsoft.YourPhone', 'Microsoft.ZuneMusic', 'MicrosoftCorporationII.QuickAssist',
+    'MicrosoftWindows.Client.WebExperience', 'MicrosoftWindows.CrossDevice', 'MSTeams'
   foreach ($app in $apps) {
     # Provisioned: the copy in the image that new users would get
     Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ $app |
@@ -61,8 +63,14 @@ Step 'Show file extensions and hidden files' {
 
 Step 'No System Restore or reserved storage' {
   Disable-ComputerRestore -Drive 'C:\'
-  DISM.exe /Online /Set-ReservedStorageState /State:Disabled /Quiet
-  Write-Output "   DISM exit code: $LASTEXITCODE"
+  # Right after setup, servicing still uses reserved storage and DISM refuses (0x800f0978). A startup
+  # task, as SYSTEM, tries at each boot and removes itself once it worked.
+  $log = 'C:\Windows\Temp\archype-reserved-storage.log'
+  $command = "DISM.exe /Online /Set-ReservedStorageState /State:Disabled > `"$log`" 2>&1 && schtasks /Delete /TN ArchypeReservedStorage /F"
+  $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c $command"
+  $trigger = New-ScheduledTaskTrigger -AtStartup
+  Register-ScheduledTask -TaskName ArchypeReservedStorage -Action $action -Trigger $trigger -User SYSTEM -RunLevel Highest -Force | Out-Null
+  Write-Output "   reserved storage: turned off at the next boot, see $log"
 }
 
 Step 'Search indexing off' {

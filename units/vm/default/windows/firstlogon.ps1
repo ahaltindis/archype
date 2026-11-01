@@ -13,14 +13,13 @@ powercfg /change standby-timeout-ac 0
 powercfg /change monitor-timeout-ac 0
 powercfg /hibernate off
 
-# virtio drivers, QEMU guest agent and SPICE agent, from the virtio-win CD
-$tools = Get-PSDrive -PSProvider FileSystem |
+# virtio drivers, QEMU guest agent and SPICE agent, from the virtio-win CD. The first match is taken
+# with [0]: Select-Object -First stops the pipeline, which the log shows as a TerminatingError.
+$tools = @(Get-PSDrive -PSProvider FileSystem |
   ForEach-Object { Join-Path $_.Root 'virtio-win-guest-tools.exe' } |
-  Where-Object { Test-Path $_ } |
-  Select-Object -First 1
+  Where-Object { Test-Path $_ })[0]
 if ($tools) {
-  # Waits for the installer process itself. Start-Process -Wait failed here with "The pipeline has
-  # been stopped" and let the script go on to the shutdown, which could cut the install short.
+  # The exit code goes to the log
   $installer = Start-Process -FilePath $tools -ArgumentList '/install', '/quiet', '/norestart' -PassThru
   $installer.WaitForExit()
   Write-Output "virtio-win-guest-tools exit code: $($installer.ExitCode)"

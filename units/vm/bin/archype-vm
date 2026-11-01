@@ -1,0 +1,214 @@
+#!/bin/bash
+
+# Windows VMs on libvirt (qemu:///system). Disks, NVRAM and TPM state are managed by libvirt; disk
+# images and the install ISOs live in /var/lib/libvirt/images (libvirt storage pool "images").
+#
+# Usage: archype-vm create <name> --iso <windows.iso> --virtio <virtio-win.iso>
+#                          [--memory <GB>] [--cpus <n>] [--disk <GB>]
+#        archype-vm start <name>
+#        archype-vm stop <name> [--force]   clean shutdown (waits); --force pulls the plug
+#        archype-vm status <name>
+#        archype-vm list
+#        archype-vm console <name>          the VM's screen (virt-viewer)
+#        archype-vm delete <name>           the VM, its disk, NVRAM, TPM state and ISO copies;
+#                                           also cleans up files left by an interrupted delete
+
+set -eEo pipefail
+
+export LIBVIRT_DEFAULT_URI=qemu:///system
+IMAGES=/var/lib/libvirt/images
+POOL=images
+STOP_TIMEOUT=120 # seconds a clean shutdown may take before stop gives up
+
+die() {
+  echo "archype-vm: $*" >&2
+  exit 1
+}
+
+check_name() {
+  [[ -n $1 ]] || die "a VM name is required"
+  [[ $1 =~ ^[A-Za-z0-9_-]+$ ]] || die "VM names may only use letters, digits, - and _"
+}
+
+exists() {
+  virsh dominfo "$1" &>/dev/null
+}
+
+check_exists() {
+  check_name "$1"
+  exists "$1" || die "no VM named '$1'"
+}
+
+state() {
+  virsh domstate "$1" 2>/dev/null
+}
+
+# The images folder as a libvirt storage pool: libvirt (root) creates and deletes its files, so
+# archype-vm needs no sudo for them. Once defined, autostart keeps it running. Refreshed so files
+# added outside libvirt show up as volumes.
+ensure_pool() {
+  if ! virsh pool-info "$POOL" &>/dev/null; then
+    virsh pool-define-as "$POOL" dir --target "$IMAGES" >/dev/null
+    virsh pool-autostart "$POOL" >/dev/null
+    virsh pool-start "$POOL" >/dev/null
+  fi
+  virsh pool-refresh "$POOL" >/dev/null
+}
+
+# The VM's files in the pool: disk and ISO copies, whichever are there
+vm_volumes() {
+  local volume
+  for volume in "$1.qcow2" "$1-windows.iso" "$1-virtio-win.iso"; do
+    virsh vol-info --pool "$POOL" "$volume" &>/dev/null && echo "$volume"
+  done
+  return 0
+}
+
+create() {
+  local name="$1" iso="" virtio="" memory=8 cpus=4 disk=96
+  check_name "$name"
+  shift
+  while (($#)); do
+    case $1 in
+    --iso) iso=$2 && shift ;;
+    --virtio) virtio=$2 && shift ;;
+    --memory) memory=$2 && shift ;;
+    --cpus) cpus=$2 && shift ;;
+    --disk) disk=$2 && shift ;;
+    *) die "unknown option for create: $1" ;;
+    esac
+    shift
+  done
+  [[ -f $iso ]] || die "--iso: Windows ISO not found: $iso"
+  [[ -f $virtio ]] || die "--virtio: virtio-win ISO not found: $virtio"
+  [[ $memory =~ ^[0-9]+$ && $cpus =~ ^[0-9]+$ && $disk =~ ^[0-9]+$ ]] ||
+    die "--memory, --cpus and --disk take whole numbers"
+  exists "$name" && die "a VM named '$name' already exists"
+
+  local disk_file="$IMAGES/$name.qcow2"
+  local windows_copy="$IMAGES/$name-windows.iso"
+  local virtio_copy="$IMAGES/$name-virtio-win.iso"
+  ensure_pool
+  [[ -n $(vm_volumes "$name") ]] && die "files of an earlier '$name' are left in $IMAGES; 'archype-vm delete $name' removes them"
+  echo "Copying the ISOs to $IMAGES (QEMU can't read your home folder)..."
+  sudo install -m644 "$iso" "$windows_copy"
+  sudo install -m644 "$virtio" "$virtio_copy"
+
+  # Windows 11 needs UEFI with Secure Boot and a TPM 2.0. Arch's OVMF has no Microsoft keys enrolled,
+  # which Windows accepts. --osinfo adds the Hyper-V enlightenments, the clock setup and the guest
+  # agent channel. The Windows ISO boots first; the disk takes over once Windows is installed.
+  # virt-install creates the (sparse) disk in the pool and prints the XML; it defines nothing.
+  local xml
+  xml=$(virt-install \
+    --print-xml \
+    --import \
+    --name "$name" \
+    --osinfo win11 \
+    --memory $((memory * 1024)) \
+    --vcpus "$cpus" \
+    --cpu host-passthrough \
+    --boot firmware=efi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=no \
+    --tpm backend.type=emulator,backend.version=2.0,model=tpm-crb \
+    --disk "path=$disk_file,size=$disk,format=qcow2,bus=virtio,cache=none,discard=unmap,boot.order=2" \
+    --disk "path=$windows_copy,device=cdrom,bus=sata,readonly=on,boot.order=1" \
+    --disk "path=$virtio_copy,device=cdrom,bus=sata,readonly=on" \
+    --network network=default,model=virtio \
+    --graphics spice \
+    --video virtio \
+    --noautoconsole)
+
+  virsh define /dev/stdin <<<"$xml" >/dev/null
+
+  # The viewer waits for the VM, so it's on screen for "Press any key to boot from CD or DVD"
+  echo "Starting $name. Press a key in the console when it asks to boot from CD or DVD."
+  setsid -f virt-viewer --connect "$LIBVIRT_DEFAULT_URI" --wait "$name" &>/dev/null
+  sleep 1
+  virsh start "$name" >/dev/null
+}
+
+start() {
+  check_exists "$1"
+  if [[ $(state "$1") == running ]]; then
+    echo "$1 is already running"
+    return
+  fi
+  virsh start "$1" >/dev/null
+  echo "$1 started"
+}
+
+stop() {
+  check_exists "$1"
+  if [[ $(state "$1") == "shut off" ]]; then
+    echo "$1 is already off"
+    return
+  fi
+  if [[ $2 == --force ]]; then
+    virsh destroy "$1" >/dev/null
+    echo "$1 powered off"
+    return
+  fi
+
+  virsh shutdown "$1" >/dev/null
+  echo -n "Shutting down $1"
+  local i
+  for ((i = 0; i < STOP_TIMEOUT; i++)); do
+    if [[ $(state "$1") == "shut off" ]]; then
+      echo " done"
+      return
+    fi
+    echo -n "."
+    sleep 1
+  done
+  echo
+  die "$1 didn't shut down in ${STOP_TIMEOUT}s; 'archype-vm stop $1 --force' powers it off"
+}
+
+status() {
+  check_exists "$1"
+  state "$1"
+}
+
+console() {
+  check_exists "$1"
+  setsid -f virt-viewer --connect "$LIBVIRT_DEFAULT_URI" --wait "$1" &>/dev/null
+}
+
+delete() {
+  check_name "$1"
+  ensure_pool
+  local -a volumes
+  mapfile -t volumes < <(vm_volumes "$1")
+  local answer
+  if exists "$1"; then
+    read -rp "Delete VM '$1' with its disk, NVRAM and TPM state? This can't be undone. [y/N] " answer
+  elif ((${#volumes[@]})); then
+    read -rp "VM '$1' is gone, but its files are left: ${volumes[*]}. Delete them? [y/N] " answer
+  else
+    die "no VM named '$1'"
+  fi
+  [[ $answer == [yY] ]] || exit 0
+
+  if exists "$1"; then
+    [[ $(state "$1") == "shut off" ]] || virsh destroy "$1" >/dev/null
+    virsh undefine "$1" --nvram --tpm >/dev/null
+  fi
+  local volume
+  for volume in "${volumes[@]}"; do
+    virsh vol-delete --pool "$POOL" "$volume" >/dev/null
+  done
+  echo "$1 deleted"
+}
+
+case $1 in
+create) create "${@:2}" ;;
+start) start "$2" ;;
+stop) stop "$2" "$3" ;;
+status) status "$2" ;;
+list) virsh list --all ;;
+console) console "$2" ;;
+delete) delete "$2" ;;
+*)
+  sed -n '6,14s/^# \?//p' "$0"
+  exit 1
+  ;;
+esac

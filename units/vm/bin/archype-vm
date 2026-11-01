@@ -70,13 +70,20 @@ vm_volumes() {
   return 0
 }
 
+# The interface languages a Windows ISO contains (sources/lang.ini), e.g. en-GB
+iso_ui_languages() {
+  7z e -so "$1" sources/lang.ini 2>/dev/null | tr -d '\r' |
+    awk '/^\[/ { list = /^\[Available UI Languages\]/; next } list && /=/ { split($1, l, "-"); print l[1] "-" toupper(l[2]) }'
+}
+
 # A small CD with autounattend.xml and firstlogon.ps1, which Windows Setup finds by itself
 build_unattend_iso() {
-  local name="$1" out="$2" dir
+  local name="$1" ui_language="$2" out="$3" dir
   dir=$(mktemp -d)
   # Windows computer names: up to 15 characters, no underscores
   local computer=${name//_/-}
-  sed "s/@COMPUTERNAME@/${computer:0:15}/" "$WINDOWS_FILES/autounattend.xml" >"$dir/autounattend.xml"
+  sed -e "s/@COMPUTERNAME@/${computer:0:15}/" -e "s/@UILANGUAGE@/$ui_language/" \
+    "$WINDOWS_FILES/autounattend.xml" >"$dir/autounattend.xml"
   cp "$WINDOWS_FILES/firstlogon.ps1" "$dir/"
   xorriso -as mkisofs -quiet -J -joliet-long -r -V UNATTEND -o "$out" "$dir"
   rm -rf "$dir"
@@ -102,6 +109,11 @@ create() {
   [[ $memory =~ ^[0-9]+$ && $cpus =~ ^[0-9]+$ && $disk =~ ^[0-9]+$ ]] ||
     die "--memory, --cpus and --disk take whole numbers"
   exists "$name" && die "a VM named '$name' already exists"
+  # Setup stops at its language screen unless the answer file names a language the ISO has
+  local -a ui_languages
+  mapfile -t ui_languages < <(iso_ui_languages "$iso")
+  ((${#ui_languages[@]} == 1)) ||
+    die "the Windows ISO should have exactly one interface language, found: ${ui_languages[*]:-none}"
 
   local disk_file="$IMAGES/$name.qcow2"
   local windows_copy="$IMAGES/$name-windows.iso"
@@ -111,7 +123,7 @@ create() {
   [[ -n $(vm_volumes "$name" --disk) ]] && die "files of an earlier '$name' are left in $IMAGES; 'archype-vm delete $name' removes them"
   local unattend_iso
   unattend_iso=$(mktemp --suffix=.iso)
-  build_unattend_iso "$name" "$unattend_iso"
+  build_unattend_iso "$name" "${ui_languages[0]}" "$unattend_iso"
   echo "Copying the ISOs to $IMAGES (QEMU can't read your home folder)..."
   sudo install -m644 "$iso" "$windows_copy"
   sudo install -m644 "$virtio" "$virtio_copy"

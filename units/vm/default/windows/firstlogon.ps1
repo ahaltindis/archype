@@ -19,9 +19,19 @@ $tools = Get-PSDrive -PSProvider FileSystem |
   Where-Object { Test-Path $_ } |
   Select-Object -First 1
 if ($tools) {
-  Start-Process -FilePath $tools -ArgumentList '/install', '/quiet', '/norestart' -Wait
+  # Waits for the installer process itself. Start-Process -Wait failed here with "The pipeline has
+  # been stopped" and let the script go on to the shutdown, which could cut the install short.
+  $installer = Start-Process -FilePath $tools -ArgumentList '/install', '/quiet', '/norestart' -PassThru
+  $installer.WaitForExit()
+  Write-Output "virtio-win-guest-tools exit code: $($installer.ExitCode)"
 } else {
   Write-Output 'virtio-win-guest-tools.exe not found on any drive'
+}
+# Proof in the log that the install got through: the guest agent is its last part
+if (Get-Service -Name QEMU-GA -ErrorAction SilentlyContinue) {
+  Write-Output 'QEMU guest agent service: installed'
+} else {
+  Write-Output 'QEMU guest agent service: missing'
 }
 
 Stop-Transcript

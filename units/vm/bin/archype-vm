@@ -9,11 +9,14 @@
 #        archype-vm finish <name>           wait for the install to end, remove the install CDs
 #        archype-vm start <name>
 #        archype-vm stop <name> [--force]   clean shutdown (waits); --force pulls the plug
-#        archype-vm status <name>
+#        archype-vm status <name>           state, and changes since the golden image
 #        archype-vm list
 #        archype-vm console <name>          the VM's screen (virt-viewer)
-#        archype-vm delete <name>           the VM, its disk, NVRAM, TPM state and ISO copies;
-#                                           also cleans up files left by an interrupted delete
+#        archype-vm golden <name>           freeze the disk as the golden image, or merge the
+#                                           changes since into it
+#        archype-vm reset <name>            throw away all changes since the golden image
+#        archype-vm delete <name>           the VM, its disk, golden image, NVRAM, TPM state and
+#                                           ISO copies; also cleans up after an interrupted delete
 
 set -eEo pipefail
 
@@ -59,11 +62,12 @@ ensure_pool() {
   virsh pool-refresh "$POOL" >/dev/null
 }
 
-# The VM's files in the pool, whichever are there: install ISO copies, and the disk with --disk
+# The VM's files in the pool, whichever are there: install ISO copies, and with --disk the disk and
+# golden image
 vm_volumes() {
   local volume
   local -a names=("$1-windows.iso" "$1-virtio-win.iso" "$1-unattend.iso")
-  [[ $2 == --disk ]] && names+=("$1.qcow2")
+  [[ $2 == --disk ]] && names+=("$1.qcow2" "$1-golden.qcow2")
   for volume in "${names[@]}"; do
     virsh vol-info --pool "$POOL" "$volume" &>/dev/null && echo "$volume"
   done
@@ -247,7 +251,83 @@ stop() {
 
 status() {
   check_exists "$1"
-  state "$1"
+  echo "state: $(state "$1")"
+  ensure_pool
+  if has_golden "$1"; then
+    local info
+    info=$(virsh vol-info --pool "$POOL" "$1.qcow2")
+    echo "golden: yes, $(awk '/^Allocation:/ { print $2, $3 }' <<<"$info") changed since"
+  else
+    echo "golden: no"
+  fi
+}
+
+# The disk is two files once there's a golden image: <name>-golden.qcow2, frozen, and <name>.qcow2 on
+# top of it (its backing file), which gets all writes. The VM always uses <name>.qcow2.
+has_golden() {
+  virsh vol-info --pool "$POOL" "$1-golden.qcow2" &>/dev/null
+}
+
+# An empty top layer on the golden image, swapped in with one rename. The files belong to root and
+# libvirt has no rename or offline commit, hence sudo for these.
+new_top_layer() {
+  local disk="$IMAGES/$1.qcow2"
+  sudo qemu-img create -q -f qcow2 -b "$IMAGES/$1-golden.qcow2" -F qcow2 "$disk.archype-new"
+  sudo chmod 600 "$disk.archype-new"
+  sudo mv -f "$disk.archype-new" "$disk"
+}
+
+# Asks, takes the sudo password before changing anything, shuts the VM down if it runs, then runs the
+# given action. A VM that was running is started again.
+with_vm_off() {
+  local name="$1" question="$2" action="$3" answer was_running=""
+  read -rp "$question [y/N] " answer
+  [[ $answer == [yY] ]] || exit 0
+  sudo -v
+  if [[ $(state "$name") != "shut off" ]]; then
+    was_running=1
+    stop "$name"
+  fi
+  "$action" "$name"
+  ensure_pool
+  if [[ -n $was_running ]]; then
+    virsh start "$name" >/dev/null
+    echo "$name started again"
+  fi
+}
+
+golden() {
+  check_exists "$1"
+  ensure_pool
+  if has_golden "$1"; then
+    with_vm_off "$1" "Merge all changes since the golden image into it? The old golden state is gone afterwards." merge_into_golden
+  else
+    with_vm_off "$1" "Freeze $1's disk as its golden image?" make_golden
+  fi
+}
+
+make_golden() {
+  sudo mv "$IMAGES/$1.qcow2" "$IMAGES/$1-golden.qcow2"
+  new_top_layer "$1"
+  echo "$1 has a golden image now: 'archype-vm reset $1' goes back to it"
+}
+
+# Writes the top layer's blocks into the golden image and empties the top layer
+merge_into_golden() {
+  sudo qemu-img commit -q "$IMAGES/$1.qcow2"
+  echo "Golden image of $1 updated"
+}
+
+reset() {
+  check_exists "$1"
+  ensure_pool
+  has_golden "$1" || die "$1 has no golden image yet: 'archype-vm golden $1' makes one"
+  with_vm_off "$1" "Reset $1 to its golden image? Everything changed since is lost." reset_to_golden
+}
+
+reset_to_golden() {
+  new_top_layer "$1"
+  echo "$1 is back to its golden image"
 }
 
 console() {
@@ -289,9 +369,11 @@ stop) stop "$2" "$3" ;;
 status) status "$2" ;;
 list) virsh list --all ;;
 console) console "$2" ;;
+golden) golden "$2" ;;
+reset) reset "$2" ;;
 delete) delete "$2" ;;
 *)
-  sed -n '7,16s/^# \?//p' "$0"
+  sed -n '7,19s/^# \?//p' "$0"
   exit 1
   ;;
 esac

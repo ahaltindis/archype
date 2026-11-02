@@ -1,0 +1,9 @@
+# Launcher entry for the VM made with `archype-vm create win11`. Seeded once: rename it and change
+# Exec when your VM has another name.
+[Desktop Entry]
+Type=Application
+Name=Windows
+Comment=Windows VM win11 over Remote Desktop
+Exec=archype-vm rdp win11
+Icon=computer
+Terminal=false

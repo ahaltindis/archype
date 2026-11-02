@@ -3,6 +3,8 @@
   "description": "libvirt VMs managed with archype-vm, for a Windows VM. Optional: install with archype-unit-install vm.",
   "version": "1.0.0",
   "config": [
-    ["libvirt.conf", ".config/libvirt/libvirt.conf"]
+    ["libvirt.conf", ".config/libvirt/libvirt.conf"],
+    ["archype-vm-win11.desktop", ".local/share/applications/archype-vm-win11.desktop", "s"],
+    ["vm-shares", ".config/archype/vm-shares", "s"]
   ]
 }

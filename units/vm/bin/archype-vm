@@ -12,6 +12,8 @@
 #        archype-vm status <name>           state, and changes since the golden image
 #        archype-vm list
 #        archype-vm console <name>          the VM's screen (virt-viewer)
+#        archype-vm rdp <name>              the Windows desktop over Remote Desktop; starts the VM
+#                                           if needed, focuses the window if already connected
 #        archype-vm golden <name>           freeze the disk as the golden image, or merge the
 #                                           changes since into it
 #        archype-vm reset <name>            throw away all changes since the golden image
@@ -26,9 +28,16 @@ POOL=images
 STOP_TIMEOUT=120 # seconds a clean shutdown may take before stop gives up
 BOOT_KEY_SECONDS=20 # how long create presses Enter for "Press any key to boot from CD or DVD"
 WINDOWS_FILES="$(dirname "$(readlink -f "$0")")/../default/windows"
+STATE_DIR="$HOME/.local/state/archype/vm" # rdp's log and pid files
+SHARES_FILE="$HOME/.config/archype/vm-shares" # folders rdp shares with Windows
+RDP_TIMEOUT=120                           # seconds rdp waits for Windows to accept connections
+RDP_USER=archype                          # the answer file's account: change here if changed in Windows
+RDP_PASSWORD=archype
 
 die() {
   echo "archype-vm: $*" >&2
+  # Started from the launcher: no terminal to show the error
+  [[ -t 2 ]] || notify-send --app-name=archype-vm "archype-vm" "$*"
   exit 1
 }
 
@@ -335,6 +344,73 @@ console() {
   setsid -f virt-viewer --connect "$LIBVIRT_DEFAULT_URI" --wait "$1" &>/dev/null
 }
 
+# The VM's address from libvirt's DHCP leases; empty until Windows has one
+vm_ip() {
+  local leases
+  leases=$(virsh domifaddr "$1" --source lease 2>/dev/null) || return 0
+  awk '$3 == "ipv4" { sub("/.*", "", $4); print $4; exit }' <<<"$leases"
+}
+
+rdp() {
+  check_exists "$1"
+  mkdir -p "$STATE_DIR"
+  local pid_file="$STATE_DIR/$1-rdp.pid" log="$STATE_DIR/$1-rdp.log" pid
+  # Already connected: a second connection would take the session away from the open window
+  if [[ -f $pid_file ]] && pid=$(<"$pid_file") && [[ $(cat "/proc/$pid/comm" 2>/dev/null) == sdl-freerdp3 ]]; then
+    hyprctl dispatch "hl.dsp.focus({ window = \"pid:$pid\" })" >/dev/null
+    return
+  fi
+
+  case $(state "$1") in
+  paused) virsh resume "$1" >/dev/null ;;
+  "shut off")
+    [[ -t 1 ]] || notify-send --app-name=archype-vm "Starting $1" "Windows takes about 30 seconds"
+    virsh start "$1" >/dev/null
+    ;;
+  esac
+
+  echo -n "Waiting for Windows in $1"
+  local ip="" i
+  for ((i = 0; i < RDP_TIMEOUT; i++)); do
+    ip=$(vm_ip "$1")
+    [[ -n $ip ]] && timeout 1 bash -c ">/dev/tcp/$ip/3389" 2>/dev/null && break
+    ip=""
+    echo -n "."
+    sleep 1
+  done
+  echo
+  [[ -n $ip ]] || die "Windows in $1 didn't accept Remote Desktop connections in ${RDP_TIMEOUT}s"
+
+  # Windows' clock falls behind while the laptop sleeps; the guest agent sets it (may not be up yet)
+  virsh domtime "$1" --sync &>/dev/null || true
+
+  # Windows' scale from the focused monitor's; Store apps only know 100, 140 and 180
+  local scale device_scale
+  scale=$(hyprctl monitors -j 2>/dev/null | jq -r '[.[] | select(.focused)][0].scale * 100 | round' 2>/dev/null) || true
+  [[ $scale =~ ^[0-9]+$ ]] || scale=100
+  if ((scale < 120)); then device_scale=100; elif ((scale < 160)); then device_scale=140; else device_scale=180; fi
+
+  local -a args=(
+    "/v:$ip" "/u:$RDP_USER" "/p:$RDP_PASSWORD" /cert:tofu "/auth-pkg-list:!kerberos"
+    "/scale-desktop:$scale" "/scale-device:$device_scale" /dynamic-resolution
+    +clipboard /sound /microphone /log-level:WARN
+    # Super belongs to Hyprland: no keyboard or mouse grab, and the Windows keys are never sent
+    -grab-keyboard -grab-mouse /kbd:remap:0x15b=0x0,remap:0x15c=0x0
+  )
+  # Only the folders listed in vm-shares, read/write, each as \\tsclient\<folder name>
+  local folder
+  if [[ -f $SHARES_FILE ]]; then
+    while read -r folder; do
+      [[ -n $folder && -d $HOME/$folder ]] && args+=("/drive:$(basename "$folder"),$HOME/$folder")
+    done < <(sed 's/#.*//' "$SHARES_FILE")
+  fi
+  # Arguments through stdin keep the password out of the process list
+  echo "--- $(date '+%F %T') connecting to $1 at $ip" >>"$log"
+  printf '%s\n' "${args[@]}" | setsid sdl-freerdp3 /args-from:stdin &>>"$log" &
+  echo $! >"$pid_file"
+  echo "Connected to $1 (log: $log)"
+}
+
 delete() {
   check_name "$1"
   ensure_pool
@@ -369,11 +445,12 @@ stop) stop "$2" "$3" ;;
 status) status "$2" ;;
 list) virsh list --all ;;
 console) console "$2" ;;
+rdp) rdp "$2" ;;
 golden) golden "$2" ;;
 reset) reset "$2" ;;
 delete) delete "$2" ;;
 *)
-  sed -n '7,19s/^# \?//p' "$0"
+  sed -n '7,21s/^# \?//p' "$0"
   exit 1
   ;;
 esac

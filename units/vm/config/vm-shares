@@ -1,0 +1,6 @@
+# Folders `archype-vm rdp` shares with Windows, read/write: one per line, relative to your home folder.
+# Each shows up in Windows as \\tsclient\<folder name>; the rest of your home folder stays hidden.
+# Missing folders are skipped. Changes apply on the next connection.
+Documents
+Downloads
+Projects

@@ -46,6 +46,11 @@ Things learned the hard way. Each one cost a debugging session.
 - `pacman -Sy` followed by `pacman -S` is a partial upgrade; always `pacman -Syu --needed`.
 - `powerprofilesctl` needs `python-gobject` (only an optional dependency of power-profiles-daemon).
   Switching profiles over ssh fails (polkit only allows the active seat session).
+- With `pipefail`, `cmd | grep -q` can fail although it matched: grep exits at the first match and
+  `cmd` dies of SIGPIPE if it writes more afterwards (`virsh pool-info` writes line by line). Save
+  the output first and grep that (`out=$(cmd); grep -q ... <<<"$out"`).
+- `xargs` treats quotes as special even in comments, so an apostrophe in a package file comment broke
+  the package list parsing (now `sed`/`awk`).
 
 ## Apps
 
@@ -97,3 +102,27 @@ Things learned the hard way. Each one cost a debugging session.
 - archinstall uses the busybox `encrypt` hook; Plymouth must come before it (Archype puts it right
   after `base udev`).
 - OVMF tries network boot before the disk unless the disk has a `bootindex`.
+
+## Windows VM (`vm` unit)
+
+- `virt-install` registers a libvirt storage pool for every folder holding a disk or ISO it's given,
+  even with `--dry-run` (a dry run once left a pool pointing into `~/Downloads`).
+- libvirt can't rename volumes or commit an overlay offline: `archype-vm golden` uses `sudo mv` and
+  `sudo qemu-img commit`. Creating and deleting volumes goes through the pool, no sudo.
+- `--osinfo win11` adds the Hyper-V enlightenments but not the QEMU guest agent channel; it's added
+  explicitly.
+- Windows Setup stops at its language screen unless the answer file's `UILanguage` is a language the
+  ISO has (`sources/lang.ini`; "English International" ISOs are `en-GB`).
+- In PowerShell transcripts, `Select-Object -First` shows up as `TerminatingError(): "The pipeline has
+  been stopped."` (it stops the upstream pipeline). Harmless, but it looks like a failure.
+- `DISM /Set-ReservedStorageState` fails right after setup (0x800f0978, servicing still running);
+  a startup task retries it.
+- Windows `Scancode Map` doesn't apply to RDP input. FreeRDP's `/kbd:remap:0x15b=0x0,remap:0x15c=0x0`
+  keeps the Windows keys from reaching Windows; `-grab-keyboard -grab-mouse` leaves Super to Hyprland.
+- RemoteApp (WinApps-style single windows, `xfreerdp3 /app:`) is fragile on Hyprland/XWayland:
+  each launch takes over the session (windows blink), some apps freeze the client, and a killed client
+  leaves a disconnected session that brings its apps back on the next connection. The full desktop
+  over `sdl-freerdp3` (Wayland) works.
+- FreeRDP's `/scale` only takes 100/140/180; Windows' DPI is `/scale-desktop:<percent>`.
+- `Get-WinEvent` id 1074 names the process behind a shutdown; `wmiprvse.exe` is PowerShell's
+  `Stop-Computer`.

@@ -5,7 +5,8 @@
 # create installs Windows unattended (default/windows/autounattend.xml): user archype, password archype.
 #
 # Usage: archype-vm create <name> --iso <windows.iso> --virtio <virtio-win.iso>
-#                          [--memory <GB>] [--cpus <n>] [--disk <GB>]
+#                          [--memory <GB>] [--cpus <n>] [--disk <GB>] [--office]
+#                                           --office: also Office Home 2024, unactivated
 #        archype-vm finish <name>           wait for the install to end, remove the install CDs
 #        archype-vm start <name>
 #        archype-vm stop <name> [--force]   clean shutdown (waits); --force pulls the plug
@@ -89,21 +90,23 @@ iso_ui_languages() {
     awk '/^\[/ { list = /^\[Available UI Languages\]/; next } list && /=/ { split($1, l, "-"); print l[1] "-" toupper(l[2]) }'
 }
 
-# A small CD with autounattend.xml and the PowerShell scripts it runs (firstlogon.ps1, tweaks.ps1)
+# A small CD with autounattend.xml and the PowerShell scripts it runs (firstlogon.ps1, tweaks.ps1,
+# and office.ps1 with --office)
 build_unattend_iso() {
-  local name="$1" ui_language="$2" out="$3" dir
+  local name="$1" ui_language="$2" office="$3" out="$4" dir
   dir=$(mktemp -d)
   # Windows computer names: up to 15 characters, no underscores
   local computer=${name//_/-}
   sed -e "s/@COMPUTERNAME@/${computer:0:15}/" -e "s/@UILANGUAGE@/$ui_language/" \
     "$WINDOWS_FILES/autounattend.xml" >"$dir/autounattend.xml"
-  cp "$WINDOWS_FILES"/*.ps1 "$dir/"
+  cp "$WINDOWS_FILES/firstlogon.ps1" "$WINDOWS_FILES/tweaks.ps1" "$dir/"
+  [[ -n $office ]] && cp "$WINDOWS_FILES/office.ps1" "$dir/"
   xorriso -as mkisofs -quiet -J -joliet-long -r -V UNATTEND -o "$out" "$dir"
   rm -rf "$dir"
 }
 
 create() {
-  local name="$1" iso="" virtio="" memory=8 cpus=4 disk=96
+  local name="$1" iso="" virtio="" memory=8 cpus=4 disk=96 office=""
   check_name "$name"
   shift
   while (($#)); do
@@ -113,6 +116,7 @@ create() {
     --memory) memory=$2 && shift ;;
     --cpus) cpus=$2 && shift ;;
     --disk) disk=$2 && shift ;;
+    --office) office=1 ;;
     *) die "unknown option for create: $1" ;;
     esac
     shift
@@ -136,7 +140,7 @@ create() {
   [[ -n $(vm_volumes "$name" --disk) ]] && die "files of an earlier '$name' are left in $IMAGES; 'archype-vm delete $name' removes them"
   local unattend_iso
   unattend_iso=$(mktemp --suffix=.iso)
-  build_unattend_iso "$name" "${ui_languages[0]}" "$unattend_iso"
+  build_unattend_iso "$name" "${ui_languages[0]}" "$office" "$unattend_iso"
   echo "Copying the ISOs to $IMAGES (QEMU can't read your home folder)..."
   sudo install -m644 "$iso" "$windows_copy"
   sudo install -m644 "$virtio" "$virtio_copy"
@@ -201,7 +205,8 @@ finish() {
   fi
 
   local started=$SECONDS
-  echo "Windows is installing in $1: 20-40 minutes, with a few reboots. It shuts down when done."
+  echo "Windows is installing in $1: 20-40 minutes (10-20 more with --office), with a few reboots. It"
+  echo "shuts down when done."
   echo "Ctrl-C is safe: 'archype-vm finish $1' waits again."
   while [[ $(state "$1") != "shut off" ]]; do
     printf '\r  %d min' $(((SECONDS - started) / 60))
@@ -450,7 +455,7 @@ golden) golden "$2" ;;
 reset) reset "$2" ;;
 delete) delete "$2" ;;
 *)
-  sed -n '7,21s/^# \?//p' "$0"
+  sed -n '7,22s/^# \?//p' "$0"
   exit 1
   ;;
 esac

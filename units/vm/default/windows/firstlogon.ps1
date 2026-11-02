@@ -36,5 +36,9 @@ if (Get-Service -Name QEMU-GA -ErrorAction SilentlyContinue) {
 # Archype's Windows settings, from the same CD
 & (Join-Path $PSScriptRoot 'tweaks.ps1')
 
+# Office, only on the CD with `archype-vm create --office`
+$office = Join-Path $PSScriptRoot 'office.ps1'
+if (Test-Path $office) { & $office }
+
 Stop-Transcript
 Stop-Computer -Force

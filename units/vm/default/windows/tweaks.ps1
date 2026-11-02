@@ -73,6 +73,12 @@ Step 'No System Restore or reserved storage' {
   Write-Output "   reserved storage: turned off at the next boot, see $log"
 }
 
+Step 'Smart App Control off' {
+  # 0 off, 1 on, 2 evaluation (where a fresh install starts). Applies at the next boot; firstlogon.ps1
+  # ends with a shutdown anyway.
+  Set-Reg 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' VerifiedAndReputablePolicyState 0
+}
+
 Step 'Search indexing off' {
   Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
   Set-Service -Name WSearch -StartupType Disabled
@@ -91,6 +97,13 @@ Step 'Dark mode' {
   $personalize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
   Set-Reg $personalize AppsUseLightTheme 0
   Set-Reg $personalize SystemUsesLightTheme 0
+}
+
+Step 'Solid dark teal background' {
+  Set-Reg 'HKCU:\Control Panel\Desktop' Wallpaper '' String
+  Set-Reg 'HKCU:\Control Panel\Colors' Background '0 80 80' String
+  # 1: solid color, so Settings shows it as the choice
+  Set-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers' BackgroundType 1
 }
 
 Step 'Classic context menu' {

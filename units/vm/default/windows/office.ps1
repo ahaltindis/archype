@@ -40,3 +40,29 @@ try {
 } catch {
   Write-Output "   failed: $_"
 }
+
+# Office follows Windows' dark mode by default, which turns Word's page dark too. 0: the light
+# "Colorful" theme (3 dark gray, 4 black, 5 white, 6 follow Windows).
+$common = 'HKCU:\Software\Microsoft\Office\16.0\Common'
+if (-not (Test-Path $common)) { New-Item -Path $common -Force | Out-Null }
+New-ItemProperty -Path $common -Name 'UI Theme' -Value 0 -PropertyType DWord -Force | Out-Null
+
+# No "Upgrade your plan" button (Microsoft 365 upsell): an override of Office's remote feature flag
+$overrides = "$common\ExperimentConfigs\ExternalFeatureOverrides"
+foreach ($app in 'word', 'excel', 'powerpoint') {
+  if (-not (Test-Path "$overrides\$app")) { New-Item -Path "$overrides\$app" -Force | Out-Null }
+  New-ItemProperty -Path "$overrides\$app" -Name 'Microsoft.Office.Licensing.ShowPerpetualUpgrade' -Value 'false' -PropertyType String -Force | Out-Null
+}
+
+# Privacy policies, 2 = off: experiences that analyse your content, that download online content,
+# and the optional connected ones. Editing and proofing work without them.
+$privacy = 'HKCU:\Software\Policies\Microsoft\Office\16.0\Common\Privacy'
+if (-not (Test-Path $privacy)) { New-Item -Path $privacy -Force | Out-Null }
+foreach ($name in 'usercontentdisabled', 'downloadcontentdisabled', 'controllerconnectedservicesenabled') {
+  New-ItemProperty -Path $privacy -Name $name -Value 2 -PropertyType DWord -Force | Out-Null
+}
+
+# No sign-in, so no Sign in button either (3: no account allowed). No OneDrive/SharePoint saving.
+$signIn = 'HKCU:\Software\Policies\Microsoft\Office\16.0\Common\SignIn'
+if (-not (Test-Path $signIn)) { New-Item -Path $signIn -Force | Out-Null }
+New-ItemProperty -Path $signIn -Name SignInOptions -Value 3 -PropertyType DWord -Force | Out-Null

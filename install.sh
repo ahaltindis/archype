@@ -117,6 +117,22 @@ check_already_installed() {
   fi
 }
 
+# Optional units (installed with archype-unit-install, not in UNITS) are updated too, after the core ones
+add_optional_units() {
+  local done_file unit
+  for done_file in "$INSTALL_STATE_DIR"/*.done; do
+    [[ -e "$done_file" ]] || continue
+    unit=$(basename "$done_file" .done)
+    [[ " ${UNITS[*]} " == *" $unit "* ]] && continue
+    if [[ -d "$ARCHYPE_PATH/units/$unit" ]]; then
+      to_install+=("$unit")
+      print_inactive "=> $unit [optional, will be updated]"
+    else
+      print_inactive "=> $unit [optional, no longer in Archype, skipped]"
+    fi
+  done
+}
+
 print_status() {
   print_title "-----------------------------"
   local unit
@@ -163,6 +179,7 @@ main() {
   install_prerequisites
 
   check_already_installed
+  add_optional_units
 
   local unit
   for unit in "${to_install[@]}"; do

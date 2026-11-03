@@ -1,4 +1,6 @@
 {
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
   "BraveAIChatEnabled": false,
   "BraveP3AEnabled": false,
   "BraveRewardsDisabled": true,
@@ -9,6 +11,14 @@
   "DefaultSearchProviderEnabled": true,
   "DefaultSearchProviderName": "Google",
   "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}",
+  "ExtensionSettings": {
+    "nngceckbapebfimnlniiiahkandclblb": {
+      "installation_mode": "force_installed",
+      "toolbar_pin": "force_pinned",
+      "update_url": "https://clients2.google.com/service/update2/crx"
+    }
+  },
   "MetricsReportingEnabled": false,
+  "PasswordManagerEnabled": false,
   "SearchSuggestEnabled": false
 }

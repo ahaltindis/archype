@@ -60,8 +60,7 @@
 #pulseaudio,
 #custom-logo,
 #custom-vpn,
-#custom-update,
-#clock.time {
+#custom-update {
   min-width: 12px;
   margin: 0 7.5px;
 }

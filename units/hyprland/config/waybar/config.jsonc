@@ -12,7 +12,8 @@
     "custom/vpn",
     "network",
     "pulseaudio",
-    "battery"
+    "battery",
+    "clock#time"
   ],
   "hyprland/workspaces": {
     "on-click": "activate",
@@ -51,9 +52,21 @@
     "tooltip-format": "Launcher\n\nSuper + Space"
   },
 
+  // Date in the middle, the month calendar on hover (waybar can't open a tooltip on click).
+  // Scroll over the date to change month.
   "clock": {
-    "format": "{:%A %H:%M}",
-    "format-alt": "{:%d %B W%V %Y}",
+    "format": "{:%d.%m.%Y %a}",
+    "tooltip-format": "<tt>{calendar}</tt>",
+    "calendar": {
+      "iso8601": true
+    },
+    "actions": {
+      "on-scroll-up": "shift_up",
+      "on-scroll-down": "shift_down"
+    }
+  },
+  "clock#time": {
+    "format": "{:%H:%M}",
     "tooltip": false
   },
   "network": {

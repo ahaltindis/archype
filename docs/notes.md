@@ -10,6 +10,10 @@ Things learned the hard way. Each one cost a debugging session.
   The old `hyprctl dispatch dpms off` fails. Check `hypridle.conf` and scripts when adding commands.
 - `hyprctl keyword` doesn't work with a Lua config. Try an option live with
   `hyprctl eval 'hl.config({ input = { follow_mouse = 2 } })'`; a reload resets it.
+- **"Lockscreen app died" after the screen wakes** means hyprlock aborted (`coredumpctl list`). With
+  0.57's default `quirks.skip_non_kms_dmabuf_formats = true` it crashed on every DPMS wake; `envs.lua`
+  sets it to `false`. Recover from a TTY: `hyprctl -i 0 eval 'hl.config({ misc = { allow_session_lock_restore = true } })'`,
+  then `hyprctl -i 0 dispatch 'hl.dsp.exec_cmd("hyprlock")'`.
 - `require()` caches modules for Hyprland's lifetime. `archype.lua` clears `archype.*` and `hypr.*` from
   `package.loaded` so `hyprctl reload` sees edits.
 - **Hyprland reloads when its config files change.** If a file or the `~/.config/archype/hyprland` link

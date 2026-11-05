@@ -19,4 +19,9 @@ hl.config({
   ecosystem = {
     no_update_news = true,
   },
+  -- Default on since 0.57; makes hyprlock crash when the screen wakes from DPMS
+  -- (https://github.com/hyprwm/hyprlock/issues/1064)
+  quirks = {
+    skip_non_kms_dmabuf_formats = false,
+  },
 })

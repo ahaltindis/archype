@@ -23,8 +23,9 @@ Things learned the hard way. Each one cost a debugging session.
 - Keybindings and waybar clicks run in the session environment, not a shell. `~/.local/bin` is on the
   session `PATH` only through `~/.config/uwsm/env`.
 - waybar's workspaces module only draws window icons (`workspace-taskbar`) when `format` contains
-  `{windows}`. A module instance name becomes a CSS class: `hyprland/workspaces#hidden` gets `.hidden`,
-  which Archype's `style.css` makes invisible. With `ignore-workspaces`, windows opened after waybar
+  `{windows}`. A module instance name becomes a CSS class (`hyprland/workspaces#minimized` gets
+  `.minimized`), and since 0.16 so does each workspace's name (`special:hidden` gets `.hidden`), so
+  never style a bare `.hidden`. With `ignore-workspaces`, windows opened after waybar
   started never show up when moved to a shown special workspace (waybar 0.15 compares
   `special:hidden` with `hidden`), so the hidden-windows module hides the other workspaces with CSS.
 - waybar can lose its connection to Hyprland's event socket and never reconnects: workspaces stop

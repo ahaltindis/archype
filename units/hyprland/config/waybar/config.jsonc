@@ -33,8 +33,7 @@
       "5": []
     }
   },
-  // Icons of hidden windows (SUPER + M); a click brings one back. Not "#hidden": the instance
-  // name becomes a CSS class, and .hidden is invisible. Other workspaces are hidden in style.css,
+  // Icons of hidden windows (SUPER + M); a click brings one back. Other workspaces are hidden in style.css,
   // not with ignore-workspaces: waybar 0.15 then loses windows opened after it started.
   "hyprland/workspaces#minimized": {
     "show-special": true,

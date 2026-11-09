@@ -27,7 +27,9 @@ Things learned the hard way. Each one cost a debugging session.
   `.minimized`), and since 0.16 so does each workspace's name (`special:hidden` gets `.hidden`), so
   never style a bare `.hidden`. With `ignore-workspaces`, windows opened after waybar
   started never show up when moved to a shown special workspace (waybar 0.15 compares
-  `special:hidden` with `hidden`), so the hidden-windows module hides the other workspaces with CSS.
+  `special:hidden` with `hidden`; still in 0.16), so the hidden-windows module hides the other
+  workspaces with CSS. Select them with `#workspaces.minimized > button`: since 0.16 each window icon
+  is a button too, and a plain descendant selector hides the hidden windows as well.
 - waybar can lose its connection to Hyprland's event socket and never reconnects: workspaces stop
   updating. `archype-restart-app waybar` fixes it (`SUPER + CTRL + B` only hides/shows the same bar).
 - Killing waybar abruptly can leave a blank "ghost" layer on top (`hyprctl layers` shows `pid: -1`).

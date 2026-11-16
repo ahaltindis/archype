@@ -58,6 +58,7 @@ EOF
 added() {
   local layouts variants
   layouts=$(hyprctl getoption -j input:kb_layout | jq -r .str)
+  [[ -n $layouts ]] || return 1
   variants=$(hyprctl getoption -j input:kb_variant | jq -r .str)
   paste <(tr ',' '\n' <<<"$layouts") <(tr ',' '\n' <<<"$variants") |
     awk -F'\t' '
@@ -75,7 +76,7 @@ active() {
 # Saves "layout<TAB>variant" lines from stdin, sorted by name, and loads them into Hyprland. The active
 # layout stays active if it's still in the list.
 apply() {
-  local index current rows layouts variants
+  local index current rows layouts variants out
   IFS=$'\t' read -r index _ < <(active)
   current=$(added | sed -n "$((index + 1))p" | cut -f1,2)
 
@@ -90,43 +91,62 @@ apply() {
   echo "$rows" >"$LAYOUTS_FILE"
   layouts=$(cut -f1 <<<"$rows" | paste -sd,)
   variants=$(cut -f2 <<<"$rows" | paste -sd,)
-  hyprctl eval "hl.config({ input = { kb_layout = \"$layouts\", kb_variant = \"$variants\" } })" >/dev/null
+  out=$(hyprctl eval "hl.config({ input = { kb_layout = \"$layouts\", kb_variant = \"$variants\" } })" 2>&1)
+  if [[ $out != ok ]]; then
+    notify -u critical "Hyprland didn't load the keyboard layouts" "$out"
+    return 1
+  fi
 
   index=$(grep -nxF "$current" <<<"$rows" | cut -d: -f1)
   hyprctl switchxkblayout all "$((${index:-1} - 1))" >/dev/null
   refresh_waybar
 }
 
-add_menu() {
-  local -A row_of
-  local layout variant short name choice
+# Whether "layout<TAB>variant" is loaded in Hyprland
+is_added() {
+  added | cut -f1,2 | grep -qxF "$1"
+}
 
-  while IFS=$'\t' read -r layout variant short name; do
-    row_of[$name]="$layout"$'\t'"$variant"
-  done < <(catalog)
-  while IFS=$'\t' read -r _ _ _ name; do
-    unset "row_of[$name]"
-  done < <(added)
+add_menu() {
+  local current choice row
+
+  # Saving without the current layouts would drop them
+  current=$(added | cut -f1,2)
+  if [[ -z $current ]]; then
+    notify -u critical "Keyboard layout not added" "Couldn't read the current layouts from Hyprland"
+    exit 1
+  fi
 
   choice=$(
-    catalog | cut -f4 | while IFS= read -r name; do
-      [[ -n ${row_of[$name]} ]] && echo "$name"
-    done | vicinae dmenu -n "Add keyboard layout" -p "Add layout..." --no-quick-look
+    awk -F'\t' 'NR == FNR { added[$1 FS $2] = 1; next } !(($1 FS $2) in added) { print $4 }' <(echo "$current") <(catalog) |
+      vicinae dmenu -n "Add keyboard layout" -p "Add layout..." --no-quick-look
   ) || exit 0
-  [[ -n ${row_of[$choice]} ]] || exit 0
+  [[ -n $choice ]] || exit 0
+  row=$(name=$choice awk -F'\t' '$4 == ENVIRON["name"] { print $1 FS $2; exit }' <(catalog))
+  [[ -n $row ]] || exit 0
 
-  { added | cut -f1,2; echo "${row_of[$choice]}"; } | apply
-  notify -u low "Keyboard layout added" "$choice"
+  printf '%s\n' "$current" "$row" | apply || exit 1
+  if is_added "$row"; then
+    notify -u low "Keyboard layout added" "$choice"
+  else
+    notify -u critical "Keyboard layout not added" "$choice is not loaded in Hyprland"
+  fi
 }
 
 remove_menu() {
-  local choice
+  local choice row
   choice=$(added | cut -f4 | vicinae dmenu -n "Remove keyboard layout" -p "Remove layout..." --no-quick-look) ||
     exit 0
   [[ -n $choice ]] || exit 0
+  row=$(added | name=$choice awk -F'\t' '$4 == ENVIRON["name"] { print $1 FS $2; exit }')
+  [[ -n $row ]] || exit 0
 
-  added | awk -F'\t' -v name="$choice" '$4 != name { print $1 FS $2 }' | apply
-  notify -u low "Keyboard layout removed" "$choice"
+  added | cut -f1,2 | grep -vxF "$row" | apply || exit 1
+  if is_added "$row"; then
+    notify -u critical "Keyboard layout not removed" "$choice is still loaded in Hyprland"
+  else
+    notify -u low "Keyboard layout removed" "$choice"
+  fi
 }
 
 menu() {
@@ -194,9 +214,18 @@ for line in s.makefile(encoding="utf-8", errors="replace"):
   done
 }
 
+# Waybar clicks and keybindings drop error output; show it in a notification instead
+report_errors() {
+  local errors code
+  errors=$("$@" 2>&1 >/dev/null)
+  code=$?
+  [[ -n $errors ]] && notify -u critical "Keyboard layout: something went wrong" "$errors"
+  return $code
+}
+
 case $1 in
-menu) menu ;;
-next) next ;;
+menu) report_errors menu ;;
+next) report_errors next ;;
 status) status ;;
 watch) watch ;;
 *)

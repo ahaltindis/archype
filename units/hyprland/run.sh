@@ -18,6 +18,10 @@ ln -snf ~/.config/archype/current/theme/vicinae.toml ~/.local/share/vicinae/them
 [[ -f ~/.local/state/vicinae/onboarding.json ]] ||
   echo '{"version":1,"completedAt":"archype-install"}' >~/.local/state/vicinae/onboarding.json
 
+# The "Keyboard Layout" launcher command. vicinae finds scripts in this folder.
+mkdir -p ~/.local/share/vicinae/scripts
+ln -sfn ~/.config/archype/hyprland/vicinae/keyboard.sh ~/.local/share/vicinae/scripts/archype-keyboard.sh
+
 # A running vicinae doesn't see newly installed or upgraded extensions until it restarts. Inside Hyprland,
 # (re)start it; outside (first install from a TTY, ssh) the autostart starts it at login.
 if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then

@@ -26,7 +26,7 @@ fi
 
 # Keyboard layout OSD and waybar updates: autostart runs it at login; inside Hyprland, (re)start it now
 if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then
-  pkill -f "archype-keyboard watch"
+  pkill -f "archype-keyboard watch" || true
   setsid uwsm app -- archype-keyboard watch >/dev/null 2>&1 &
 fi
 

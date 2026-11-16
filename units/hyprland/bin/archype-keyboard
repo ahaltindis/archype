@@ -1,0 +1,206 @@
+#!/bin/bash
+
+# Keyboard layouts: the waybar module shows the active one, a click opens a menu to switch, add or remove
+# layouts, Super + Shift + Space switches to the next one. The added layouts are kept in a state file
+# that input.lua reads at start; without it, Hyprland uses the layout chosen during the Arch install.
+#
+# Usage: archype-keyboard menu     switch, add or remove a layout (waybar click)
+#        archype-keyboard next     switch to the next layout
+#        archype-keyboard status   JSON for the waybar module
+#        archype-keyboard watch    OSD and waybar update on every layout change (autostart)
+
+STATE_DIR="$HOME/.local/state/archype/keyboard"
+LAYOUTS_FILE="$STATE_DIR/layouts" # "layout<TAB>variant" per line, in Hyprland's order
+CATALOG_FILE="$STATE_DIR/catalog" # cache of the XKB list below
+XKB_RULES=/usr/share/X11/xkb/rules/evdev.xml
+WAYBAR_SIGNAL=10                  # "signal" of custom/keyboard in waybar's config
+
+notify() {
+  notify-send --app-name=Keyboard "$@"
+}
+
+refresh_waybar() {
+  pkill -RTMIN+$WAYBAR_SIGNAL -x waybar 2>/dev/null || true
+}
+
+# layout<TAB>variant<TAB>language code<TAB>name of every XKB layout, by name
+catalog() {
+  if [[ ! $CATALOG_FILE -nt $XKB_RULES ]]; then
+    mkdir -p "$STATE_DIR"
+    python3 - "$XKB_RULES" >"$CATALOG_FILE.tmp" <<'EOF' && mv "$CATALOG_FILE.tmp" "$CATALOG_FILE"
+import collections, sys, xml.etree.ElementTree as ET
+
+rows = []
+for layout in ET.parse(sys.argv[1]).getroot().iter("layout"):
+    item = layout.find("configItem")
+    name = item.findtext("name")
+    short = item.findtext("shortDescription") or name
+    rows.append([name, "", short, item.findtext("description")])
+    for variant in layout.iter("variant"):
+        item = variant.find("configItem")
+        rows.append([name, item.findtext("name"), item.findtext("shortDescription") or short,
+                     item.findtext("description")])
+
+# A few names are used twice; the menu needs them unique
+count = collections.Counter(row[3] for row in rows)
+for row in rows:
+    if count[row[3]] > 1:
+        row[3] += " [" + row[0] + (" " + row[1] if row[1] else "") + "]"
+
+for row in sorted(rows, key=lambda row: row[3].lower()):
+    print("\t".join(row))
+EOF
+  fi
+  cat "$CATALOG_FILE"
+}
+
+# layout<TAB>variant<TAB>language code<TAB>name of the added layouts, in Hyprland's order
+added() {
+  local layouts variants
+  layouts=$(hyprctl getoption -j input:kb_layout | jq -r .str)
+  variants=$(hyprctl getoption -j input:kb_variant | jq -r .str)
+  paste <(tr ',' '\n' <<<"$layouts") <(tr ',' '\n' <<<"$variants") |
+    awk -F'\t' '
+      NR == FNR { info[$1 FS $2] = $3 FS $4; next }
+      { key = $1 FS $2; print key FS (key in info ? info[key] : $1 FS $1) }
+    ' <(catalog) -
+}
+
+# Index and name of the main keyboard's active layout
+active() {
+  hyprctl devices -j |
+    jq -r '[.keyboards[] | select(.main)][0] // .keyboards[0] | "\(.active_layout_index)\t\(.active_keymap)"'
+}
+
+# Saves "layout<TAB>variant" lines from stdin, sorted by name, and loads them into Hyprland. The active
+# layout stays active if it's still in the list.
+apply() {
+  local index current rows layouts variants
+  IFS=$'\t' read -r index _ < <(active)
+  current=$(added | sed -n "$((index + 1))p" | cut -f1,2)
+
+  # Catalog order is by name; layouts it doesn't know go last
+  rows=$(awk -F'\t' '
+    NR == FNR { want[$1 FS $2] = 1; order[NR] = $1 FS $2; n = NR; next }
+    ($1 FS $2) in want && !(($1 FS $2) in done) { print $1 FS $2; done[$1 FS $2] = 1 }
+    END { for (i = 1; i <= n; i++) if (!(order[i] in done)) print order[i] }
+  ' - <(catalog))
+
+  mkdir -p "$STATE_DIR"
+  echo "$rows" >"$LAYOUTS_FILE"
+  layouts=$(cut -f1 <<<"$rows" | paste -sd,)
+  variants=$(cut -f2 <<<"$rows" | paste -sd,)
+  hyprctl eval "hl.config({ input = { kb_layout = \"$layouts\", kb_variant = \"$variants\" } })" >/dev/null
+
+  index=$(grep -nxF "$current" <<<"$rows" | cut -d: -f1)
+  hyprctl switchxkblayout all "$((${index:-1} - 1))" >/dev/null
+  refresh_waybar
+}
+
+add_menu() {
+  local -A row_of
+  local layout variant short name choice
+
+  while IFS=$'\t' read -r layout variant short name; do
+    row_of[$name]="$layout"$'\t'"$variant"
+  done < <(catalog)
+  while IFS=$'\t' read -r _ _ _ name; do
+    unset "row_of[$name]"
+  done < <(added)
+
+  choice=$(
+    catalog | cut -f4 | while IFS= read -r name; do
+      [[ -n ${row_of[$name]} ]] && echo "$name"
+    done | vicinae dmenu -n "Add keyboard layout" -p "Add layout..." --no-quick-look
+  ) || exit 0
+  [[ -n ${row_of[$choice]} ]] || exit 0
+
+  { added | cut -f1,2; echo "${row_of[$choice]}"; } | apply
+  notify -u low "Keyboard layout added" "$choice"
+}
+
+remove_menu() {
+  local choice
+  choice=$(added | cut -f4 | vicinae dmenu -n "Remove keyboard layout" -p "Remove layout..." --no-quick-look) ||
+    exit 0
+  [[ -n $choice ]] || exit 0
+
+  added | awk -F'\t' -v name="$choice" '$4 != name { print $1 FS $2 }' | apply
+  notify -u low "Keyboard layout removed" "$choice"
+}
+
+menu() {
+  local -a names
+  local index choice i
+
+  mapfile -t names < <(added | cut -f4)
+  IFS=$'\t' read -r index _ < <(active)
+
+  choice=$(
+    {
+      for i in "${!names[@]}"; do
+        if ((i == index)); then echo "${names[i]} (active)"; else echo "${names[i]}"; fi
+      done
+      echo "Add layout"
+      ((${#names[@]} > 1)) && echo "Remove layout"
+    } | vicinae dmenu -n "Keyboard" -p "Keyboard layout..." --no-quick-look
+  ) || exit 0
+
+  case $choice in
+  "Add layout") add_menu ;;
+  "Remove layout") remove_menu ;;
+  *" (active)") ;;
+  *)
+    for i in "${!names[@]}"; do
+      [[ ${names[i]} == "$choice" ]] && hyprctl switchxkblayout all "$i" >/dev/null
+    done
+    ;;
+  esac
+}
+
+next() {
+  hyprctl switchxkblayout all next >/dev/null
+}
+
+status() {
+  local index name short
+  IFS=$'\t' read -r index name < <(active)
+  short=$(added | sed -n "$((index + 1))p" | cut -f3)
+  jq -cn --arg short "${short:-?}" --arg name "$name" \
+    '{text: $short, tooltip: "\($name)\n\nClick: choose or add a layout\nSuper + Shift + Space: next layout"}'
+}
+
+# Hyprland sends an "activelayout" event for every keyboard device, also when nothing changed; act only
+# when the main keyboard's layout really changed
+watch() {
+  local socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+  local event last name monitor
+
+  IFS=$'\t' read -r _ last < <(active)
+  python3 -u -c '
+import socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.connect(sys.argv[1])
+for line in s.makefile(encoding="utf-8", errors="replace"):
+    print(line, end="")
+' "$socket" | while IFS= read -r event; do
+    [[ $event == activelayout\>\>* ]] || continue
+    IFS=$'\t' read -r _ name < <(active)
+    [[ $name == "$last" ]] && continue
+    last=$name
+    refresh_waybar
+    monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')
+    swayosd-client --monitor "$monitor" --custom-message "$name" --custom-icon input-keyboard-symbolic
+  done
+}
+
+case $1 in
+menu) menu ;;
+next) next ;;
+status) status ;;
+watch) watch ;;
+*)
+  sed -n '7,10s/^# \?//p' "$0"
+  exit 1
+  ;;
+esac

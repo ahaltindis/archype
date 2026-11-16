@@ -17,10 +17,34 @@ local function vconsole(key)
   return value
 end
 
+-- Layouts added from the keyboard menu (archype-keyboard): "layout<TAB>variant" per line
+local function added_layouts()
+  local file = io.open(os.getenv("HOME") .. "/.local/state/archype/keyboard/layouts", "r")
+  if not file then
+    return nil
+  end
+  local layouts, variants = {}, {}
+  for line in file:lines() do
+    local layout, variant = line:match("^([^\t]+)\t?(.*)$")
+    if layout then
+      table.insert(layouts, layout)
+      table.insert(variants, variant)
+    end
+  end
+  file:close()
+  if #layouts == 0 then
+    return nil
+  end
+  return table.concat(layouts, ","), table.concat(variants, ",")
+end
+
+-- Added layouts win over the one from the Arch install
+local layouts, variants = added_layouts()
+
 hl.config({
   input = {
-    kb_layout = vconsole("XKBLAYOUT") or "us",
-    kb_variant = vconsole("XKBVARIANT") or "",
+    kb_layout = layouts or vconsole("XKBLAYOUT") or "us",
+    kb_variant = variants or vconsole("XKBVARIANT") or "",
     kb_options = "compose:caps",
     -- Click to focus; hovering doesn't change focus, but scrolling reaches the window under the cursor
     follow_mouse = 2,

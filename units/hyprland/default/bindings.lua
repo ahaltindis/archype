@@ -23,6 +23,7 @@ bind("SUPER + CTRL + SPACE", "Next background in theme", "archype-theme-bg-next"
 bind("SUPER + CTRL + B", "Toggle top bar", "pkill -SIGUSR1 waybar")
 bind("SUPER + CTRL + I", "Toggle locking on idle", "archype-toggle-idle")
 bind("SUPER + CTRL + N", "Toggle nightlight", "archype-toggle-nightlight")
+bind("SUPER + SHIFT + SPACE", "Next keyboard layout", "archype-keyboard next")
 
 -- Notifications
 bind("SUPER + COMMA", "Dismiss last notification", "makoctl dismiss")

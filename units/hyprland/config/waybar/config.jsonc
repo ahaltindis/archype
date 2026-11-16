@@ -8,6 +8,7 @@
   "modules-center": ["clock"],
   "modules-right": [
     "tray",
+    "custom/keyboard",
     "bluetooth",
     "custom/vpn",
     "network",
@@ -84,6 +85,13 @@
     "signal": 9,
     "on-click": "archype-vpn toggle",
     "on-click-right": "archype-vpn menu"
+  },
+  // Active keyboard layout; archype-keyboard sends the signal on changes
+  "custom/keyboard": {
+    "exec": "archype-keyboard status",
+    "return-type": "json",
+    "signal": 10,
+    "on-click": "archype-keyboard menu"
   },
   "battery": {
     "format": "{capacity}% {icon}",

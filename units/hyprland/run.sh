@@ -24,6 +24,12 @@ if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then
   setsid uwsm app -- vicinae server --replace >/dev/null 2>&1 &
 fi
 
+# Keyboard layout OSD and waybar updates: autostart runs it at login; inside Hyprland, (re)start it now
+if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then
+  pkill -f "archype-keyboard watch"
+  setsid uwsm app -- archype-keyboard watch >/dev/null 2>&1 &
+fi
+
 # Brave as the default browser, unless one was already chosen
 if [[ -z "$(xdg-settings get default-web-browser 2>/dev/null)" ]]; then
   xdg-settings set default-web-browser brave-browser.desktop

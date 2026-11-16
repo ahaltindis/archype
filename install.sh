@@ -22,7 +22,8 @@ catch_errors() {
   rm -rf ${TMP_DIR}
   print_error "\nArchype installation failed!"
   print_error "\nThis command halted with exit code $code:"
-  print_error "$BASH_COMMAND"
+  # The command's text is unexpanded; show the unit that was installing instead of "$unit"
+  print_error "${BASH_COMMAND//\$unit/${unit:-\$unit}}"
   print_active "\nYou can retry by running: bash $ARCHYPE_PATH/install.sh"
 }
 

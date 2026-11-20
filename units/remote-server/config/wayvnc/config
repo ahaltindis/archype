@@ -1,0 +1,12 @@
+# wayvnc: this computer's desktop over VNC (remote-server unit). `man wayvnc` lists the options.
+# Listens on every network this computer is on. At home, that's the home network and, through the
+# router, its WireGuard clients. The router forwards no port to it: never add a port forward for 5900.
+use_relative_paths=true
+address=0.0.0.0
+port=5900
+
+# Log in with this computer's user name and password (PAM). The connection is encrypted with
+# RSA-AES; the key next to this file is made by the installer.
+enable_auth=true
+enable_pam=true
+rsa_private_key_file=rsa_key.pem

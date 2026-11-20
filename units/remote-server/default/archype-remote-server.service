@@ -1,0 +1,13 @@
+[Unit]
+Description=Archype remote desktop server (wayvnc)
+# Runs with the Hyprland session (uwsm), which Archype's autologin starts at boot
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/archype-remote-server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

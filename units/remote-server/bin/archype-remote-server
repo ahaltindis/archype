@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Starts wayvnc for the running Hyprland session (archype-remote-server.service).
+# Config: ~/.config/wayvnc/config. Logs: journalctl --user -u archype-remote-server
+#
+# wayvnc turns the keys it receives into key codes with its own keyboard layout, so it gets Hyprland's:
+# with a different one, some characters typed on the other computer would come out wrong.
+
+keyboard=$(hyprctl devices -j 2>/dev/null | jq -c '.keyboards[] | select(.main)')
+if [[ -n $keyboard ]]; then
+  export XKB_DEFAULT_LAYOUT=$(jq -r '.layout' <<<"$keyboard")
+  export XKB_DEFAULT_VARIANT=$(jq -r '.variant' <<<"$keyboard")
+  export XKB_DEFAULT_OPTIONS=$(jq -r '.options' <<<"$keyboard")
+fi
+
+exec wayvnc

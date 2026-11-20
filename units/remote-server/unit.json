@@ -1,0 +1,8 @@
+{
+  "name": "Remote Desktop Server",
+  "description": "This computer's Hyprland desktop over VNC (wayvnc), for the home network. Optional: install with archype-unit-install remote-server.",
+  "version": "1.0.0",
+  "config": [
+    ["wayvnc/config", ".config/wayvnc/config"]
+  ]
+}

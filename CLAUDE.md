@@ -34,7 +34,9 @@ The v1 plan, decisions and the "Later" list are in `docs/v1.md`. Gotchas learned
 - Units: `preflight`, `system`, `network`, `cmd`, `hyprland`, `boot`, `cmd-essentials`, `dev`, `print-scan`.
 - Optional units are not in `UNITS`: `archype-unit-install <name>` installs them, then `install.sh` keeps
   them updated (after the core units). `vm`: libvirt and `archype-vm` (Windows VM: unattended install,
-  golden image, RDP).
+  golden image, RDP). `remote-server`: wayvnc with the Hyprland session (user service, PAM login,
+  RSA-AES), for the home desktop. `remote-client`: `archype-remote <host>` (TigerVNC) and a
+  Super+Ctrl+R submap that sends every key to the viewer.
 - Hyprland config is Lua: `~/.config/hypr/hyprland.lua` (user) loads
   `~/.config/archype/hyprland/archype.lua` (defaults, theme, units' `hypr.lua`), then the user's overrides.
 

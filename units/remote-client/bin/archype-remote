@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Another computer's desktop over VNC: one with the remote-server unit (wayvnc), at home or over the
+# home WireGuard VPN. Logs in with that computer's user name and password.
+#
+# Usage: archype-remote <host>   host name or IP address; host::port for a port other than 5900
+#
+# Super + Ctrl + R sends every key to the remote desktop (Super included); press it again to give
+# the keyboard back to this computer. F8 opens the viewer's menu (full screen, disconnect).
+
+if [[ -z $1 ]]; then
+  echo "Usage: archype-remote <host>" >&2
+  exit 1
+fi
+
+host=$1
+[[ $host == *::* ]] || host="$host::5900"
+
+# Encrypted connections only (RSA-AES): never falls back to an unencrypted one
+exec uwsm app -- vncviewer -SecurityTypes RA2_256,RA2 -FullScreen "$host"

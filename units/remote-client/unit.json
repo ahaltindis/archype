@@ -1,0 +1,5 @@
+{
+  "name": "Remote Desktop Client",
+  "description": "archype-remote: another computer's desktop over VNC, e.g. one with the remote-server unit. Optional: install with archype-unit-install remote-client.",
+  "version": "1.0.0"
+}
